@@ -24,3 +24,11 @@ pnpm-debug.log*
 
 # local runtime data
 server/data/*.local.json
+
+# runtime server directories (created on first upload)
+temp/
+uploads/
+
+# runtime flat-file data (created on first register/login)
+server/data/users.json
+server/data/accounts.json

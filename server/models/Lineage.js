@@ -8,11 +8,11 @@ const lineageSchema = new mongoose.Schema({
   },
   parentProjectId: mongoose.Schema.Types.ObjectId,
   donor: {
-    userId: mongoose.Schema.Types.ObjectId,
+    userId: String,
     username: String,
   },
   salvager: {
-    userId: mongoose.Schema.Types.ObjectId,
+    userId: String,
     username: String,
   },
   generationNumber: {

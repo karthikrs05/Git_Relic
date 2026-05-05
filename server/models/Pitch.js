@@ -7,14 +7,14 @@ const pitchSchema = new mongoose.Schema({
     required: true,
   },
   salvagerId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
   },
   pitchText: {
     type: String,
     required: true,
   },
+  prLink: String,
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected'],

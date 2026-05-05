@@ -5,6 +5,7 @@ import Landing from './pages/Landing';
 import Explore from './pages/Explore';
 import RelicDetail from './pages/RelicDetail';
 import DropProject from './pages/DropProject';
+import Pitch from './pages/Pitch';
 import Leaderboard from './pages/Leaderboard';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
@@ -27,7 +28,7 @@ export default function App() {
               )}
             />
             <Route
-              path="/relic_detail"
+              path="/relic_detail/:projectId"
               element={(
                 <ProtectedRoute>
                   <RelicDetail />
@@ -50,7 +51,10 @@ export default function App() {
               </ProtectedRoute>
             )}
           />
-          <Route path="/pitch" element={<Navigate to="/leaderboard" replace />} />
+          <Route
+            path="/pitch"
+            element={(<ProtectedRoute><Pitch /></ProtectedRoute>)}
+          />
           <Route
             path="/dashboard"
             element={(

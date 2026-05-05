@@ -1,91 +1,150 @@
 # Architecture Overview
 
-Git Relic is a full-stack web application with:
+Git Relic is a full-stack web application that salvages abandoned open-source projects.
 
-- A React + Vite frontend for UI, routing, animations, and auth UX.
-- A Node.js + Express backend for authentication, JWT-protected APIs, and account state.
-- A file-based JSON data store for local user persistence and per-user account records.
+- **Frontend** — React + Vite, Tailwind CSS, Framer Motion
+- **Backend** — Node.js + Express (ESM), two data layers (see below)
+- **Primary DB** — MongoDB + Mongoose (projects, pitches, lineage)
+- **Auth store** — Flat-file JSON (users, accounts) — see note below
+
+---
 
 ## High-Level Architecture
 
-1. Client Layer (Frontend)
-- Built with React.
-- Routing via `react-router-dom`.
-- Styling via Tailwind CSS.
-- Motion and transitions via Framer Motion.
-- Authentication state managed in `AuthContext`.
+```
+Browser (React/Vite)
+  │  VITE_API_BASE_URL
+  ▼
+Express API (port 8787)
+  ├── /api/auth      → file-based JSON (users.json, accounts.json)
+  ├── /api/projects  → MongoDB: Project model
+  ├── /api/pitches   → MongoDB: Pitch model
+  └── /api/lineage   → MongoDB: Lineage model
+         ▼
+    MongoDB (MONGODB_URI)
+```
 
-2. API Layer (Backend)
-- Express server exposes `/api/*` endpoints.
-- Auth routes handle register/login/profile and account bootstrap.
-- JWT middleware protects private routes.
+### ⚠️ Data Layer Split
+Auth routes (`authRoutes.js`) use `server/data/users.json` and `server/data/accounts.json` for persistence — **not** MongoDB. The `User` Mongoose model exists at `server/models/User.js` but is currently unused. All other models (Project, Pitch, Lineage) use MongoDB.
 
-3. Data Layer
-- Users stored in `server/data/users.json`.
-- Account state stored in `server/data/accounts.json`.
-- Passwords are hashed with bcrypt (`bcryptjs`) before storage.
-- JWT tokens are signed and verified with `jsonwebtoken`.
+This split is a known architectural inconsistency and is a candidate for future consolidation.
+
+---
 
 ## Frontend Structure
 
-- `src/components`: Reusable UI and route guard components.
-- `src/pages`: Route-level screens (`/landing`, `/explore`, `/auth`, `/dashboard`, `/drop_project`, `/leaderboard`).
-- `src/layouts`: Shared app layout and shell.
-- `src/hooks`: Reusable hooks (`useTypewriter`).
-- `src/context`: Auth state provider (`AuthContext`).
-- `src/services`: API communication (`auth.js`).
-- `src/data`: Mock data for UI sections.
+| Path | Purpose |
+|------|---------|
+| `src/pages/` | Route-level screens |
+| `src/components/` | Reusable UI + route guards |
+| `src/layouts/` | Shared app shell (`AppLayout`) |
+| `src/context/` | Auth state (`AuthContext`) |
+| `src/hooks/` | Reusable hooks (`useTypewriter`) |
+| `src/data/mockData.js` | Decorative data (landing page log feed only) |
+
+### Pages & Routes
+
+| Route | Page | Auth |
+|-------|------|------|
+| `/landing` | `Landing.jsx` | Public |
+| `/auth` | `Auth.jsx` | Public |
+| `/explore` | `Explore.jsx` | Protected |
+| `/relic_detail/:projectId` | `RelicDetail.jsx` | Protected |
+| `/drop_project` | `DropProject.jsx` | Protected |
+| `/pitch` | `Pitch.jsx` | Protected |
+| `/dashboard` | `Dashboard.jsx` | Protected |
+| `/leaderboard` | `Leaderboard.jsx` | Protected |
+
+---
 
 ## Backend Structure
 
-- `server/index.js`: Express app entry, middleware registration, route mounting.
-- `server/routes/authRoutes.js`: Register/login/me endpoints.
-- `server/middleware/authMiddleware.js`: JWT verification middleware.
-- `server/data/users.json`: Local persistent user data.
-- `server/data/accounts.json`: Local persistent account data returned after login.
+```
+server/
+├── index.js              — entry: CORS, middleware, route mounting, DB connect
+├── config/db.js          — MongoDB connection via Mongoose
+├── middleware/
+│   └── authMiddleware.js — JWT verification
+├── routes/
+│   ├── authRoutes.js     — register, login, me, PATCH /me (file-based)
+│   ├── projectRoutes.js  — upload, analyze, list, get, scan, pending-review
+│   ├── pitchRoutes.js    — submit, list by project, user pitches, accept/reject
+│   └── lineageRoutes.js  — get lineage chain for a project
+├── models/
+│   ├── Project.js        — Mongoose schema (status, aiAnalysis, securityScan…)
+│   ├── Pitch.js          — Mongoose schema (pitchText, prLink, status…)
+│   ├── Lineage.js        — Mongoose schema (donor, salvager, generationNumber…)
+│   └── User.js           — Mongoose schema (UNUSED — auth uses flat files)
+├── utils/
+│   ├── securityScanner.js — gitleaks wrapper (cross-platform binary detection)
+│   └── aiAnalyzer.js      — Gemini AI analysis
+└── data/
+    ├── users.json         — runtime auth store (gitignored)
+    └── accounts.json      — runtime account store (gitignored)
+```
 
-## Backend Auth Implementation
+---
 
-### Auth Routes (`server/routes/authRoutes.js`)
+## Key API Endpoints
 
-Three core endpoints:
+### Auth (`/api/auth`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/register` | — | Create account |
+| POST | `/login` | — | Sign in, get JWT |
+| GET | `/me` | ✓ | Current user profile |
+| PATCH | `/me` | ✓ | Update bio |
 
-#### `POST /api/auth/register`
-- Validates `username`, `email`, `password` (400 if missing)
-- Checks for duplicate email (409 conflict)
-- Hashes password via `bcrypt.hash(password, 10)`
-- Creates user record with UUID, trimmed fields, ISO timestamp
-- Auto-provisions account with stats and activity log
-- Signs JWT and returns `{ token, user }` (201)
+### Projects (`/api/projects`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/upload` | ✓ | Upload ZIP, scan, analyze |
+| POST | `/:id/analyze` | ✓ | Re-run AI analysis |
+| GET | `/list` | — | All published projects |
+| GET | `/user/:userId` | ✓ | Projects by user |
+| GET | `/status/pending-review` | Admin | Admin queue |
+| GET | `/:id` | — | Single project |
+| GET | `/:id/analysis` | — | AI analysis result |
+| GET | `/:id/security` | ✓ | Security scan result |
 
-#### `POST /api/auth/login`
-- Validates `email`, `password` (400 if missing)
-- Finds user by normalized email (401 if not found)
-- Compares password via `bcrypt.compare()` (401 if invalid)
-- Updates `lastLoginAt` and logs login activity
-- Signs JWT and returns `{ token, user }` (200)
+### Pitches (`/api/pitches`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/` | ✓ | Submit a pitch |
+| GET | `/project/:id` | — | Pitches for a project |
+| GET | `/user/my` | ✓ | Current user's pitches |
+| GET | `/:id` | — | Single pitch |
+| PATCH | `/:id/respond` | ✓ | Accept/reject (donor only); accept triggers salvage |
 
-#### `GET /api/auth/me` (Protected)
-- Requires `Authorization: Bearer <token>`
-- Returns current user with latest account state
-- Returns 404 if user deleted, 401 if token invalid
+### Lineage (`/api/lineage`)
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/project/:id` | — | Ownership chain for a project |
+| GET | `/:id` | — | Single lineage record |
 
-### Account Management
-
-- `createAccount()`: Initializes fresh account with default stats (`relicPoints`, `droppedProjects`, `salvagedProjects`, `activePitches`)
-- `upsertAccountForUser()`: Creates or updates account on each login/registration, preserving existing stats and appending activity
-- `publicUser()`: Strips sensitive fields (passwordHash) before returning user data
-
-### JWT Configuration
-- Payload: `{ id, email, username }`
-- Expiry: `7d`
-- Secret: `process.env.JWT_SECRET` or fallback `dev_jwt_secret_change_me`
+---
 
 ## Security Model
 
-- Passwords are never stored in plain text.
-- Registration hashes passwords using bcrypt salt rounds.
-- Login compares plaintext password to hash via bcrypt compare.
-- JWT token required in `Authorization: Bearer <token>` for protected endpoints.
-- Invalid or expired JWT returns HTTP 401.
-- Logged-in responses include a server-owned account object with stats and activity.
+- Passwords hashed with bcrypt (10 rounds) before storage
+- JWT payload: `{ id, email, username }`, expiry 7 days
+- JWT secret from `JWT_SECRET` env var (startup warning if missing)
+- Admin endpoints gated by `ADMIN_EMAILS` env var (comma-separated list)
+- Security scanning via gitleaks (cross-platform binary detection)
+- Projects blocked from publish if secrets detected in scan
+
+---
+
+## Environment Variables
+
+See `.env.example` for the full list. Required vars:
+
+| Variable | Used by |
+|----------|--------|
+| `MONGODB_URI` | Database connection |
+| `JWT_SECRET` | Token signing/verification |
+| `GEMINI_API_KEY` | AI project analysis |
+| `VITE_API_BASE_URL` | Frontend API base URL |
+| `PORT` | Server port (default 8787) |
+| `CORS_ORIGIN` | Allowed origin (default localhost:5173) |
+| `ADMIN_EMAILS` | Comma-separated admin email addresses |

@@ -4,12 +4,14 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "node:url";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { readUsers } from "./authRoutes.js";
 import Project from "../models/Project.js";
 import SecurityScanLog from "../models/SecurityScanLog.js";
 import {
   extractZip,
   validateProjectStructure,
   cleanupTempFile,
+  cleanupProjectDir,
   getProjectMetadata,
 } from "../utils/fileExtractor.js";
 import { parseGitHistory } from "../utils/gitParser.js";
@@ -61,10 +63,10 @@ router.post(
       const extractId = randomUUID();
 
       // Extract zip
-      const projectDir = await extractZip(tempFilePath, extractId);
+      const extractionDir = await extractZip(tempFilePath, extractId);
 
-      // Validate project structure
-      await validateProjectStructure(projectDir);
+      // Resolve actual project root (handles zips that wrap content in a folder)
+      const projectDir = await validateProjectStructure(extractionDir);
 
       // Parse git history
       const gitData = await parseGitHistory(projectDir);
@@ -111,7 +113,9 @@ router.post(
         issues: sanitizedIssues.map(i => `${i.type} in ${i.file}`),
       };
 
-      if (scanResult.passed) {
+      if (scanResult.skipped) {
+        project.status = "published"; // Bypass pending_review
+      } else if (scanResult.passed) {
         project.status = "scanned"; // Ready for AI analysis
       } else {
         project.status = "pending_review"; // Blocked due to secrets
@@ -123,8 +127,11 @@ router.post(
       if (scanResult.passed) {
         const aiAnalysis = await analyzeProjectWithAI(projectDir, gitData);
         project.aiAnalysis = aiAnalysis;
-        project.status = "published"; // Ready for salvagers
+        project.status = "published";
+        project.storageLocation = null; // directory will be deleted below
         await project.save();
+        // Clean up extracted project files — all data is now in MongoDB
+        await cleanupProjectDir(projectDir);
       }
 
       // Cleanup temp file
@@ -232,12 +239,16 @@ router.post("/:projectId/analyze", authMiddleware, async (req, res) => {
 router.get("/list", async (_req, res) => {
   try {
     const projects = await Project.find({ status: "published" })
-      .populate("donorId", "username")
-      .select(
-        "title description techStack commitCount lastActivity metadata createdAt donorId",
-      );
+      .select("title description techStack commitCount lastActivity metadata createdAt donorId")
+      .lean();
 
-    res.json(projects);
+    const users = await readUsers();
+    const stitched = projects.map(p => {
+      const donor = users.find(u => u.id === p.donorId);
+      return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
+    });
+
+    res.json(stitched);
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch projects" });
   }
@@ -273,15 +284,47 @@ router.get("/:projectId/analysis", async (req, res) => {
   }
 });
 
+// Helper: check if the authenticated user is in the ADMIN_EMAILS env var list
+function isAdmin(req) {
+  if (!process.env.ADMIN_EMAILS) return false;
+  const admins = process.env.ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase());
+  return admins.includes(req.user?.email?.toLowerCase());
+}
+
+// Literal routes must be declared before /:projectId to avoid ambiguity
+router.get("/status/pending-review", authMiddleware, async (req, res) => {
+  if (!isAdmin(req)) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  try {
+    const projects = await Project.find({ status: "pending_review" }).lean();
+    const users = await readUsers();
+    
+    const stitched = projects.map(p => {
+      const donor = users.find(u => u.id === p.donorId);
+      return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
+    });
+
+    res.json(stitched);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch pending reviews" });
+  }
+});
+
 router.get("/:projectId", async (req, res) => {
   try {
-    const project = await Project.findById(req.params.projectId)
-      .populate("donorId", "username")
-      .populate("currentOwner", "username");
+    const project = await Project.findById(req.params.projectId).lean();
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
+
+    const users = await readUsers();
+    const donor = users.find(u => u.id === project.donorId);
+    const owner = users.find(u => u.id === project.currentOwner);
+
+    project.donorId = { username: donor ? donor.username : "unknown" };
+    project.currentOwner = { username: owner ? owner.username : "unknown" };
 
     res.json(project);
   } catch (error) {
@@ -317,18 +360,5 @@ router.get("/:projectId/security", async (req, res) => {
   }
 });
 
-router.get("/status/pending-review", authMiddleware, async (req, res) => {
-  try {
-    // Only show to admin or the donor
-    const projects = await Project.find({ status: "pending_review" }).populate(
-      "donorId",
-      "username email",
-    );
-
-    res.json(projects);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch pending reviews" });
-  }
-});
 
 export default router;

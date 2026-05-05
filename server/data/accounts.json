@@ -48,5 +48,85 @@
         "message": "Authenticated via backend session."
       }
     ]
+  },
+  {
+    "userId": "71919ec9-4940-46da-ae2c-b9de6abe3edd",
+    "username": "admin",
+    "email": "admin@gmail.com",
+    "createdAt": "2026-05-05T17:54:49.109Z",
+    "lastLoginAt": "2026-05-05T18:50:51.814Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-05T17:54:49.111Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-05T17:55:08.066Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:00:12.119Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:03:45.174Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:07:18.732Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:15:14.168Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:19:00.863Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:19:08.644Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:29:25.038Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:36:19.966Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:44:56.336Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:50:02.015Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:50:51.787Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
   }
 ]

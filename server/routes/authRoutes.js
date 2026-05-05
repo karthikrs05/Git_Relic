@@ -6,6 +6,7 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { JWT_SECRET } from '../config/jwtConfig.js';
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -13,7 +14,7 @@ const __dirname = path.dirname(__filename);
 const usersFile = path.join(__dirname, '..', 'data', 'users.json');
 const accountsFile = path.join(__dirname, '..', 'data', 'accounts.json');
 
-async function readUsers() {
+export async function readUsers() {
   const raw = await fs.readFile(usersFile, 'utf-8');
   return JSON.parse(raw);
 }
@@ -105,7 +106,7 @@ async function upsertAccountForUser(user, overrides = {}) {
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, username: user.username },
-    process.env.JWT_SECRET || 'dev_jwt_secret_change_me',
+    JWT_SECRET,
     { expiresIn: '7d' }
   );
 }
@@ -179,6 +180,27 @@ router.get('/me', authMiddleware, async (req, res) => {
     return res.json(publicUser(user, account));
   } catch {
     return res.status(500).json({ message: 'Failed to fetch user profile' });
+  }
+});
+
+router.patch('/me', authMiddleware, async (req, res) => {
+  try {
+    const { bio } = req.body;
+    if (bio === undefined) {
+      return res.status(400).json({ message: 'bio field is required' });
+    }
+
+    const users = await readUsers();
+    const idx = users.findIndex((u) => u.id === req.user.id);
+    if (idx === -1) return res.status(404).json({ message: 'User not found' });
+
+    users[idx].bio = String(bio).trim();
+    await writeUsers(users);
+
+    const account = await upsertAccountForUser(users[idx]);
+    return res.json(publicUser(users[idx], account));
+  } catch {
+    return res.status(500).json({ message: 'Failed to update profile' });
   }
 });
 

@@ -10,9 +10,14 @@ const __dirname = path.dirname(__filename);
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/projects');
 const TEMP_DIR = path.join(__dirname, '../../temp');
 
-// Ensure directories exist
-await fs.mkdir(UPLOAD_DIR, { recursive: true });
-await fs.mkdir(TEMP_DIR, { recursive: true });
+// Ensure runtime directories exist at startup
+try {
+  await fs.mkdir(UPLOAD_DIR, { recursive: true });
+  await fs.mkdir(TEMP_DIR, { recursive: true });
+} catch (error) {
+  console.error('[FATAL] Cannot create upload directories:', error.message);
+  process.exit(1);
+}
 
 export async function extractZip(zipPath, extractId) {
   try {
@@ -33,18 +38,31 @@ export async function extractZip(zipPath, extractId) {
   }
 }
 
-export async function validateProjectStructure(projectDir) {
-  try {
-    // Check if .git directory exists
-    const gitDir = path.join(projectDir, '.git');
-    const stats = await fs.stat(gitDir);
-    if (!stats.isDirectory()) {
-      throw new Error('Invalid project: missing .git directory');
+export async function validateProjectStructure(extractionDir) {
+  // Helper: check if a given dir has a .git subdirectory
+  async function hasGit(dir) {
+    try {
+      const stats = await fs.stat(path.join(dir, '.git'));
+      return stats.isDirectory();
+    } catch {
+      return false;
     }
-    return true;
-  } catch (error) {
-    throw new Error('Invalid project structure: ' + error.message);
   }
+
+  // Case 1: .git is directly in the extraction root (ideal structure)
+  if (await hasGit(extractionDir)) return extractionDir;
+
+  // Case 2: zip wrapped the project in a single top-level folder
+  // e.g. my-project/ → my-project/.git/  (common with Windows right-click zip)
+  const entries = await fs.readdir(extractionDir, { withFileTypes: true });
+  const subDirs = entries.filter((e) => e.isDirectory());
+
+  for (const sub of subDirs) {
+    const candidate = path.join(extractionDir, sub.name);
+    if (await hasGit(candidate)) return candidate;
+  }
+
+  throw new Error('Invalid project structure: no .git directory found at root or one level deep. Make sure the zip contains a Git repository.');
 }
 
 export async function cleanupTempFile(filePath) {
@@ -52,6 +70,14 @@ export async function cleanupTempFile(filePath) {
     await fs.unlink(filePath);
   } catch (error) {
     console.error('Cleanup error:', error.message);
+  }
+}
+
+export async function cleanupProjectDir(projectDir) {
+  try {
+    await fs.rm(projectDir, { recursive: true, force: true });
+  } catch (error) {
+    console.error('Project dir cleanup error:', error.message);
   }
 }
 

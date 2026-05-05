@@ -11,7 +11,7 @@ const securityScanLogSchema = new mongoose.Schema({
   issues: [
     {
       file: String,
-      type: String,
+      type: { type: String }, // Mongoose reserved keyword fix
       line: String,
       severity: String,
     },

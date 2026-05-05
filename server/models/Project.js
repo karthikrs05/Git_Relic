@@ -2,8 +2,7 @@ import mongoose from 'mongoose';
 
 const projectSchema = new mongoose.Schema({
   donorId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     required: true,
   },
   title: String,
@@ -30,11 +29,13 @@ const projectSchema = new mongoose.Schema({
     summary: String,
     failureReason: String,
     roadmap: [String],
+    difficulty: String,
+    estimatedHours: String,
+    analyzedAt: { type: Date, default: Date.now },
   },
   storageLocation: String,
   currentOwner: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String,
     default: function() {
       return this.donorId;
     },
