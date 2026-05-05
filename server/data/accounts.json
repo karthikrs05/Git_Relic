@@ -1,0 +1,42 @@
+[
+  {
+    "userId": "5241bcb7-4acb-4cf4-9146-db0823f25df3",
+    "username": "Karthik",
+    "email": "karthiksajithnair@gmail.com",
+    "createdAt": "2026-05-05T04:40:16.644Z",
+    "lastLoginAt": "2026-05-05T13:50:54.185Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-05T04:47:33.338Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-05T04:49:34.305Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T04:59:13.388Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T13:43:02.321Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T13:50:54.155Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
+  }
+]

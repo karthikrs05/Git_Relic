@@ -1,0 +1,15 @@
+Commands to run GitRelic locally:
+
+Option 1 (Recommended - Single Command):
+npm run dev:full
+
+Option 2 (Manual - Run Server and Client Separately):
+# Start server in background
+nohup node server/index.js > server.log 2>&1 &
+
+# Start client in background
+nohup npx vite > client.log 2>&1 &
+
+After running either option, access:
+- Client: http://localhost:5173/
+- Server API: http://localhost:8787/

@@ -33,4 +33,8 @@ export const pitches = [
   { user: 'sh1ft', rep: 1420, summary: 'Modularize auth and cut infra cost by 40% in 2 sprints.' },
   { user: 'coldstack', rep: 980, summary: 'Port to Bun runtime and add typed plugin API for integrations.' },
   { user: 'zer0day', rep: 1675, summary: 'Stabilize CI/CD, rewrite flaky tests, ship roadmap in 30 days.' },
+  { user: 'root_alpha', rep: 1860, summary: 'Ship account recovery, upgrade auth flow, and remove state drift.' },
+  { user: 'ghostpatch', rep: 1315, summary: 'Refactor the rescue pipeline and make the UI feel like a terminal.' },
+  { user: 'stackforge', rep: 1095, summary: 'Recover abandoned monorepos and add observability across the stack.' },
+  { user: 'nullwave', rep: 890, summary: 'Replace brittle routes with guard rails and add backend account state.' },
 ];

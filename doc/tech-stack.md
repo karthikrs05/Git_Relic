@@ -25,7 +25,8 @@
 
 ## Data Storage
 
-- Local JSON file (`server/data/users.json`) for user persistence in current implementation.
+- Local JSON file (`server/data/users.json`) for user persistence.
+- Local JSON file (`server/data/accounts.json`) for authenticated account state.
 
 ## Scripts
 

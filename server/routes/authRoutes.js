@@ -11,6 +11,7 @@ const router = Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const usersFile = path.join(__dirname, '..', 'data', 'users.json');
+const accountsFile = path.join(__dirname, '..', 'data', 'accounts.json');
 
 async function readUsers() {
   const raw = await fs.readFile(usersFile, 'utf-8');
@@ -19,6 +20,86 @@ async function readUsers() {
 
 async function writeUsers(users) {
   await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+}
+
+async function readAccounts() {
+  try {
+    const raw = await fs.readFile(accountsFile, 'utf-8');
+    return JSON.parse(raw);
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
+async function writeAccounts(accounts) {
+  await fs.writeFile(accountsFile, JSON.stringify(accounts, null, 2));
+}
+
+function createAccount(user, overrides = {}) {
+  const now = new Date().toISOString();
+  return {
+    userId: user.id,
+    username: user.username,
+    email: user.email,
+    createdAt: user.createdAt || now,
+    lastLoginAt: now,
+    stats: {
+      relicPoints: 0,
+      droppedProjects: 0,
+      salvagedProjects: 0,
+      activePitches: 0,
+      ...overrides.stats,
+    },
+    activity: overrides.activity || [
+      { at: now, type: 'account_created', message: 'Account provisioned and ready.' },
+    ],
+  };
+}
+
+function publicUser(user, account) {
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    createdAt: user.createdAt,
+    account,
+  };
+}
+
+async function upsertAccountForUser(user, overrides = {}) {
+  const accounts = await readAccounts();
+  const existingIndex = accounts.findIndex((account) => account.userId === user.id);
+  const nextAccount = existingIndex === -1
+    ? createAccount(user, overrides)
+    : {
+        ...accounts[existingIndex],
+        username: user.username,
+        email: user.email,
+        createdAt: accounts[existingIndex].createdAt || user.createdAt,
+        lastLoginAt: new Date().toISOString(),
+        stats: {
+          relicPoints: 0,
+          droppedProjects: 0,
+          salvagedProjects: 0,
+          activePitches: 0,
+          ...accounts[existingIndex].stats,
+          ...overrides.stats,
+        },
+        activity: [
+          ...(accounts[existingIndex].activity || []),
+          ...(overrides.activity || []),
+        ],
+      };
+
+  if (existingIndex === -1) {
+    accounts.push(nextAccount);
+  } else {
+    accounts[existingIndex] = nextAccount;
+  }
+
+  await writeAccounts(accounts);
+  return nextAccount;
 }
 
 function signToken(user) {
@@ -53,8 +134,10 @@ router.post('/register', async (req, res) => {
     users.push(user);
     await writeUsers(users);
 
+    const account = await upsertAccountForUser(user);
+
     const token = signToken(user);
-    return res.status(201).json({ token, user: { id: user.id, username: user.username, email: user.email } });
+    return res.status(201).json({ token, user: publicUser(user, account) });
   } catch {
     return res.status(500).json({ message: 'Failed to register user' });
   }
@@ -75,8 +158,13 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
 
+    const account = await upsertAccountForUser(user, {
+      activity: [
+        { at: new Date().toISOString(), type: 'login', message: 'Authenticated via backend session.' },
+      ],
+    });
     const token = signToken(user);
-    return res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
+    return res.json({ token, user: publicUser(user, account) });
   } catch {
     return res.status(500).json({ message: 'Failed to login' });
   }
@@ -87,7 +175,8 @@ router.get('/me', authMiddleware, async (req, res) => {
     const users = await readUsers();
     const user = users.find((u) => u.id === req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
-    return res.json({ id: user.id, username: user.username, email: user.email, createdAt: user.createdAt });
+    const account = await upsertAccountForUser(user);
+    return res.json(publicUser(user, account));
   } catch {
     return res.status(500).json({ message: 'Failed to fetch user profile' });
   }

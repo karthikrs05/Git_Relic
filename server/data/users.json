@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": "5241bcb7-4acb-4cf4-9146-db0823f25df3",
+    "username": "Karthik",
+    "email": "karthiksajithnair@gmail.com",
+    "passwordHash": "$2a$10$GIasYukDSMH8fOSqme7djuUMbqBaVB2BX8gBb0vHY4SHEIfbGgoa6",
+    "createdAt": "2026-05-05T04:40:16.644Z"
+  }
+]

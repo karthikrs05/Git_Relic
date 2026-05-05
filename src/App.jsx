@@ -5,7 +5,7 @@ import Landing from './pages/Landing';
 import Explore from './pages/Explore';
 import RelicDetail from './pages/RelicDetail';
 import DropProject from './pages/DropProject';
-import Pitch from './pages/Pitch';
+import Leaderboard from './pages/Leaderboard';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,26 +16,41 @@ export default function App() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route element={<AppLayout />}>
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/relic_detail" element={<RelicDetail />} />
-          <Route
-            path="/drop_project"
-            element={(
-              <ProtectedRoute>
-                <DropProject />
+          <Route element={<AppLayout />}>
+            <Route path="/landing" element={<Landing />} />
+            <Route
+              path="/explore"
+              element={(
+                <ProtectedRoute>
+                  <Explore />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/relic_detail"
+              element={(
+                <ProtectedRoute>
+                  <RelicDetail />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/drop_project"
+              element={(
+                <ProtectedRoute>
+                  <DropProject />
               </ProtectedRoute>
             )}
           />
           <Route
-            path="/pitch"
+            path="/leaderboard"
             element={(
               <ProtectedRoute>
-                <Pitch />
+                <Leaderboard />
               </ProtectedRoute>
             )}
           />
+          <Route path="/pitch" element={<Navigate to="/leaderboard" replace />} />
           <Route
             path="/dashboard"
             element={(
