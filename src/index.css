@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-ghost-bg text-ghost-white font-mono antialiased;
+  background-image: radial-gradient(circle at 20% 10%, rgba(0, 255, 159, 0.08), transparent 25%), radial-gradient(circle at 80% 0%, rgba(0, 255, 136, 0.06), transparent 35%);
+}
+
+.scanlines::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.03) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  opacity: 0.16;
+  z-index: 40;
+}
+
+.grid-overlay {
+  background-size: 36px 36px;
+}
