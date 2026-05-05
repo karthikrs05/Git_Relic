@@ -4,7 +4,7 @@
     "username": "Karthik",
     "email": "karthiksajithnair@gmail.com",
     "createdAt": "2026-05-05T04:40:16.644Z",
-    "lastLoginAt": "2026-05-05T16:07:12.394Z",
+    "lastLoginAt": "2026-05-05T16:42:37.556Z",
     "stats": {
       "relicPoints": 0,
       "droppedProjects": 0,
@@ -39,6 +39,11 @@
       },
       {
         "at": "2026-05-05T16:07:12.361Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T16:42:37.524Z",
         "type": "login",
         "message": "Authenticated via backend session."
       }
