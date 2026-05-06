@@ -54,7 +54,7 @@
     "username": "admin",
     "email": "admin@gmail.com",
     "createdAt": "2026-05-05T17:54:49.109Z",
-    "lastLoginAt": "2026-05-05T18:50:51.814Z",
+    "lastLoginAt": "2026-05-06T02:43:08.612Z",
     "stats": {
       "relicPoints": 0,
       "droppedProjects": 0,
@@ -124,6 +124,81 @@
       },
       {
         "at": "2026-05-05T18:50:51.787Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T18:56:18.116Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T02:43:08.586Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
+  },
+  {
+    "userId": "b0ffcfb4-272b-41ad-bafe-75b20e9e0e54",
+    "username": "testuser",
+    "email": "test@test.com",
+    "createdAt": "2026-05-05T19:04:24.684Z",
+    "lastLoginAt": "2026-05-05T19:10:13.575Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-05T19:04:24.685Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-05T19:04:24.757Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:05:35.800Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:06:17.651Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:06:51.379Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:07:21.902Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:07:47.072Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:09:12.219Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:09:48.647Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-05T19:10:13.503Z",
         "type": "login",
         "message": "Authenticated via backend session."
       }

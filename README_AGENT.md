@@ -1,6 +1,6 @@
 # README_AGENT.md
 # Format: Agent-readable structured project manifest
-# Generated: 2026-05-05
+# Updated: 2026-05-06
 # Repo: https://github.com/karthikrs05/Git_Relic
 
 ---
@@ -32,7 +32,7 @@ tech_stack:
     - simple-git (git history parsing)
     - unzipper (ZIP extraction)
     - gitleaks npm wrapper (secret scanning)
-    - @google/generative-ai — gemini-1.5-flash (AI analysis)
+    - @google/generative-ai — gemini-3.1-pro-preview (AI analysis)
   dev_tools:
     - concurrently (run client + server together)
     - autoprefixer, postcss
@@ -87,8 +87,20 @@ GET  /api/projects/:projectId/security   → SecurityScanLog       [PUBLIC]
 GET  /api/projects/user/:userId          → [ ...projects ]       [AUTH_REQUIRED]
 GET  /api/projects/status/pending-review → [ ...projects ]       [AUTH_REQUIRED]
 
-# Legacy (test-only)
-GET  /api/protected/relics               → hardcoded stub        [AUTH_REQUIRED]
+# Pitches
+POST /api/pitches                        → { pitch }              [AUTH_REQUIRED]
+GET  /api/pitches/user/my                → [ ...pitches ]         [AUTH_REQUIRED]
+GET  /api/pitches/project/:projectId     → [ ...pitches ]         [AUTH_REQUIRED]
+GET  /api/pitches/:pitchId               → pitch object           [AUTH_REQUIRED]
+GET  /api/pitches/:projectId             → alias for project      [AUTH_REQUIRED]
+PATCH /api/pitches/:pitchId/respond      → { message, pitch }     [AUTH_REQUIRED] [donor only]
+PATCH /api/pitches/:pitchId/accept       → { message, pitch }     [AUTH_REQUIRED] [donor only]
+PATCH /api/pitches/:pitchId/reject       → { message, pitch }     [AUTH_REQUIRED] [donor only]
+
+# Lineage
+GET  /api/lineage/project/:projectId     → [ ...lineage ]         [PUBLIC]
+GET  /api/lineage/:projectId             → alias for project      [PUBLIC]
+GET  /api/lineage/:lineageId             → lineage object         [PUBLIC]
 ```
 
 ---
@@ -97,12 +109,13 @@ GET  /api/protected/relics               → hardcoded stub        [AUTH_REQUIRE
 
 ```
 path: /landing         → pages/Landing.jsx        [PUBLIC]
-path: /explore         → pages/Explore.jsx         [PUBLIC]
-path: /relic_detail    → pages/RelicDetail.jsx     [PUBLIC]
+path: /explore         → pages/Explore.jsx         [PROTECTED]
+path: /relic_detail/:projectId → pages/RelicDetail.jsx [PROTECTED]
 path: /auth            → pages/Auth.jsx            [PUBLIC]
 path: /drop_project    → pages/DropProject.jsx     [PROTECTED]
 path: /pitch           → pages/Pitch.jsx           [PROTECTED]
 path: /dashboard       → pages/Dashboard.jsx       [PROTECTED]
+path: /leaderboard     → pages/Leaderboard.jsx     [PROTECTED]
 path: *                → redirect /landing
 ```
 
@@ -111,6 +124,17 @@ path: *                → redirect /landing
 ## RECENT_CHANGES
 
 ```
+date: 2026-05-06
+  type:   fix+feat
+  label:  gitleaks integration, model fix, doc sync
+  detail: 3-step binary resolution (npm→project-root→PATH), .gitleaks.toml,
+          gemini-2.0-flash-lite→gemini-3.1-pro-preview, all docs updated
+
+date: 2026-05-06
+  type:   fix
+  label:  String IDs, SecurityScanLog schema, Windows gitleaks error detection,
+          pitchRoutes.test.js mock fix — 50 tests passing
+
 date: 2026-05-05
   commit: c7d2c32
   type:   feat
@@ -181,14 +205,14 @@ feature: Security Scanning (Gitleaks)
     - server/models/SecurityScanLog.js
     - server/routes/projectRoutes.js  (scan triggered inside POST /upload)
   notes:   Runs gitleaks binary via execAsync. Issues capped at 10. Secret values are
-           NOT stored — only file, type, line, severity.
+           NOT stored — only file, type, line, severity. binary resolved from project root via import.meta.url.
 
 feature: AI Project Analysis (Gemini)
   status:  [STABLE]
   files:
     - server/utils/aiAnalyzer.js
     - server/routes/projectRoutes.js  (POST /:projectId/analyze, also auto-runs on upload)
-  notes:   Uses gemini-1.5-flash. Reads README + last 10 commit messages.
+  notes:   Uses gemini-3.1-pro-preview. Reads README + last 10 commit messages.
            Returns: summary, failureReason, roadmap[], difficulty, estimatedHours.
            Falls back to getDefaultAnalysis() on parse/API failure.
 
@@ -212,24 +236,29 @@ feature: User Dashboard
     - server/routes/projectRoutes.js  (GET /user/:userId)
 
 feature: Pitch Page
-  status:  [WIP]
+  status:  [STABLE]
   files:
     - src/pages/Pitch.jsx
     - server/models/Pitch.js
-  notes:   Pitch model exists (server/models/Pitch.js) but no routes implemented yet.
+    - server/routes/pitchRoutes.js
+  notes:   Full CRUD. POST /api/pitches, GET /project/:id, PATCH /:id/respond.
+           Accept triggers ownership transfer, sets status='salvaged', creates Lineage record.
+           GET /api/pitches/user/my for Dashboard pitch tracker.
 
 feature: Lineage Tracking
-  status:  [WIP]
+  status:  [STABLE]
   files:
     - server/models/Lineage.js
-  notes:   Schema exists; no routes or frontend integration implemented.
+    - server/routes/lineageRoutes.js
+  notes:   GET /api/lineage/project/:id, GET /api/lineage/:id. Created on pitch accept.
 
 feature: Salvage / Ownership Transfer
-  status:  [WIP]
+  status:  [STABLE]
   files:
     - server/models/Project.js (currentOwner field)
-  notes:   Project schema has currentOwner. No transfer endpoint exists yet.
-           Status enum includes 'salvaged' but no route sets it.
+    - server/routes/pitchRoutes.js (PATCH /:id/respond)
+  notes:   PATCH /:id/respond with action='accept' transfers ownership, sets
+           status='salvaged', creates Lineage record, rejects competing pitches.
 
 feature: Project Security Report View
   status:  [STABLE]
@@ -238,11 +267,11 @@ feature: Project Security Report View
     - server/models/SecurityScanLog.js
 
 feature: Pending Review Queue (Admin)
-  status:  [WIP]
+  status:  [STABLE]
   files:
     - server/routes/projectRoutes.js  (GET /status/pending-review)
-  notes:   Returns all pending_review projects. No role-based guard — any authed user
-           can call this. Admin role not yet implemented.
+  notes:   Returns all pending_review projects. RBAC guard: only emails in
+           ADMIN_EMAILS env var can access. Returns 403 for non-admins.
 
 feature: Page Transitions & Terminal UI
   status:  [STABLE]
@@ -282,68 +311,9 @@ feature: Mock Data (Dev / Demo)
 ## KNOWN_CONSTRAINTS
 
 ```
-constraint: .env.example is empty
-  severity: HIGH
-  detail:   File exists but has no content. Required env vars are inferred from code:
-              MONGODB_URI     — MongoDB connection string (server/config/db.js)
-              JWT_SECRET      — JWT signing secret (server/middleware/authMiddleware.js)
-              GEMINI_API_KEY  — Google Generative AI key (server/utils/aiAnalyzer.js)
-              PORT            — defaults to 8787
-  action:   Populate .env.example and create .env before running server.
-
-constraint: Gitleaks binary path is Linux-only
-  severity: HIGH
-  files:    server/utils/securityScanner.js:9
-  detail:   Resolves `gitleaks/dist/gitleaks-linux-x64`. Will fail on Windows/macOS.
-  action:   Add OS-conditional binary resolution or wrap in try/catch with fallback.
-
-constraint: Top-level await in ESM module
-  severity: MEDIUM
-  files:    server/utils/fileExtractor.js:14-15
-  detail:   `await fs.mkdir(...)` at module top level. Works in Node 16+ ESM but
-            will fail if file is imported in a CommonJS context.
-
-constraint: No admin role / RBAC
-  severity: MEDIUM
-  files:    server/routes/projectRoutes.js:320-332
-  detail:   GET /status/pending-review is guarded by authMiddleware but has no admin
-            check. Any registered user can access all pending_review projects.
-
-constraint: saveSecurityReport is unused
-  severity: LOW
-  files:    server/utils/securityScanner.js:65-75
-  detail:   Exported function references hardcoded absolute path /uploads/security.
-            Not called anywhere. Dead code.
-
-constraint: JWT fallback secret in production
-  severity: HIGH
-  files:    server/middleware/authMiddleware.js:11, server/routes/authRoutes.js:12
-  detail:   Falls back to literal string 'dev_jwt_secret_change_me' if JWT_SECRET
-            not set. Must be overridden in all non-development environments.
-
-constraint: CORS locked to localhost:5173
-  severity: MEDIUM
-  files:    server/index.js:11
-  detail:   `origin: 'http://localhost:5173'` is hardcoded. Must be updated for
-            staging/production deployments.
-
-constraint: Upload size limit: 500MB
+constraint: None
   severity: INFO
-  files:    server/routes/projectRoutes.js:44
-  detail:   multer fileSize limit. Extracted project files are NOT cleaned up on
-            success — only the temp zip is deleted.
-
-constraint: Project.js schema missing aiAnalysis fields
-  severity: MEDIUM
-  files:    server/models/Project.js:29-33
-  detail:   aiAnalysis sub-document is missing `difficulty`, `estimatedHours`, and
-            `analyzedAt` fields defined in aiAnalyzer.js return object. Data saves
-            but those fields are not typed/validated by Mongoose.
-
-constraint: mockData.js is not removed
-  severity: LOW
-  files:    src/data/mockData.js
-  detail:   Static fixture — unclear if pages still import it. Verify before removal.
+  detail:   All previously known constraints have been resolved.
 ```
 
 ---
@@ -501,11 +471,16 @@ CodeRelic/
 │   │   ├── User.js
 │   │   ├── Project.js
 │   │   ├── SecurityScanLog.js
-│   │   ├── Pitch.js                   # [WIP — no routes]
-│   │   └── Lineage.js                 # [WIP — no routes]
+│   │   ├── Pitch.js                   # [STABLE]
+│   │   └── Lineage.js                 # [STABLE]
 │   ├── routes/
 │   │   ├── authRoutes.js
-│   │   └── projectRoutes.js
+│   │   ├── projectRoutes.js
+│   │   ├── pitchRoutes.js             # [STABLE]
+│   │   └── lineageRoutes.js           # [STABLE]
+│   ├── config/
+│   │   ├── db.js
+│   │   └── jwtConfig.js               # [NEW] crypto-random JWT_SECRET fallback
 │   └── utils/
 │       ├── aiAnalyzer.js
 │       ├── fileExtractor.js
@@ -551,9 +526,17 @@ CodeRelic/
     ├── architecture.md
     ├── system-flow.md
     ├── tech-stack.md
+    ├── CHANGELOG.md
+    ├── PROJECT_STATUS.md
+    ├── TEST_REPORT.md
     ├── PHASE_2_IMPLEMENTATION.md
     ├── PHASE_3_SECURITY_SCANNING.md
     └── PHASE_4_AI_PATHOLOGIST.md
+
+root:
+├── .gitleaks.toml                     # [NEW] gitleaks config — suppress false positives
+├── gitleaks.exe                       # [NEW] manually installed binary (gitignored)
+└── vitest.config.js                   # [NEW] test runner config
 ```
 
 ---

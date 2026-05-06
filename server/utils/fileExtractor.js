@@ -69,7 +69,9 @@ export async function cleanupTempFile(filePath) {
   try {
     await fs.unlink(filePath);
   } catch (error) {
-    console.error('Cleanup error:', error.message);
+    if (error.code !== 'ENOENT') {
+      console.error('Cleanup error:', error.message);
+    }
   }
 }
 
@@ -77,7 +79,9 @@ export async function cleanupProjectDir(projectDir) {
   try {
     await fs.rm(projectDir, { recursive: true, force: true });
   } catch (error) {
-    console.error('Project dir cleanup error:', error.message);
+    if (error.code !== 'ENOENT') {
+      console.error('Project dir cleanup error:', error.message);
+    }
   }
 }
 

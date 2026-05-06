@@ -32,3 +32,7 @@ uploads/
 # runtime flat-file data (created on first register/login)
 server/data/users.json
 server/data/accounts.json
+
+# gitleaks binary (manually downloaded — not committed to repo)
+gitleaks
+gitleaks.exe

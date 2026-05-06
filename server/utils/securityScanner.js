@@ -1,17 +1,26 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
 const execAsync = promisify(exec);
 const require = createRequire(import.meta.url);
 
-// Resolve the gitleaks binary: tries the npm-bundled binary first,
-// falls back to a system-installed `gitleaks` on PATH.
+// Resolve the project root (two levels up from server/utils/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+
+// Resolve the gitleaks binary using three strategies (in priority order):
+//   1. npm-bundled binary (gitleaks npm package)
+//   2. Binary dropped into the project root  (e.g. gitleaks.exe / gitleaks)
+//   3. System-installed binary on PATH
 function getGitleaksBinary() {
   const platform = process.platform;
   const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
 
+  // 1. npm package binary
   const npmBinaryMap = {
     linux:  `gitleaks/dist/gitleaks-linux-${arch}`,
     darwin: `gitleaks/dist/gitleaks-darwin-${arch}`,
@@ -23,12 +32,25 @@ function getGitleaksBinary() {
     try {
       return require.resolve(npmPath);
     } catch {
-      // npm package binary not present — fall through to system PATH
+      // npm package binary not present — fall through
     }
   }
 
-  // System-installed gitleaks (installed via package manager or standalone)
-  return platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
+  // 2. Binary placed in the project root (manual install)
+  const localBinaryName = platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
+  const localBinaryPath = path.join(PROJECT_ROOT, localBinaryName);
+  try {
+    // Use sync existsSync equivalent via fs.statSync — we keep it sync here
+    // so the function stays synchronous and simple.
+    const { statSync } = require('fs');
+    statSync(localBinaryPath);
+    return localBinaryPath;
+  } catch {
+    // Not present in project root — fall through to PATH
+  }
+
+  // 3. System-installed gitleaks on PATH
+  return localBinaryName;
 }
 
 export async function scanWithGitleaks(projectPath) {

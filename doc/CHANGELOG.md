@@ -41,3 +41,18 @@
 [2026-05-06] [fix] `SecurityScanLog` validation bug (`Cast to [string] failed`) — resolved Mongoose reserved keyword conflict by changing `type: String` to `type: { type: String }` inside the `issues` array sub-schema.
 [2026-05-06] [fix] `scanWithGitleaks` Windows error fallback — updated catch block to detect "not recognized" as an infrastructure failure rather than a security threat, properly allowing uploads without gitleaks to publish instead of getting stuck in `pending_review`.
 [2026-05-06] [test] Test suite — updated `pitchRoutes.test.js` mock behavior to correctly support the newly chained `.lean()` execution path. All 50 backend tests passing.
+[2026-05-06] [feat] gitleaks binary resolution — `getGitleaksBinary()` now uses 3-step lookup: (1) npm package, (2) project root `gitleaks.exe`/`gitleaks`, (3) system PATH → server/utils/securityScanner.js
+[2026-05-06] [chore] Added `gitleaks` and `gitleaks.exe` to `.gitignore` — prevents committing the 22MB manually-downloaded binary → .gitignore
+[2026-05-06] [config] Created `.gitleaks.toml` — suppresses false positives from doc placeholder tokens (YOUR_TOKEN_HERE); excludes temp/, uploads/, scratch/, node_modules/ from scanning → .gitleaks.toml
+[2026-05-06] [fix] Gemini model updated from deprecated `gemini-1.5-flash` (404 Not Found) to `gemini-2.0-flash-lite` (active, higher free-tier quota) → server/utils/aiAnalyzer.js
+[2026-05-06] [fix] gitleaks binary path resolved via import.meta.url → server/utils/securityScanner.js
+[2026-05-06] [fix] missing gitleaks skips gracefully, sets status published → server/routes/projectRoutes.js
+[2026-05-06] [feat] .gitleaks.toml baseline config created → .gitleaks.toml
+[2026-05-06] [fix] AI model updated to gemini-3.1-pro-preview → server/utils/aiAnalyzer.js
+[2026-05-06] [fix] users now saved to MongoDB, removed users.json dependency → server/routes/authRoutes.js
+[2026-05-06] [fix] gitHistory array added to Project schema → server/models/Project.js
+[2026-05-06] [fix] pitch body field renamed pitchText → message → server/routes/pitchRoutes.js
+[2026-05-06] [fix] alias route added GET /api/pitches/:projectId → server/routes/pitchRoutes.js
+[2026-05-06] [fix] route ordering fixed, pending-review no longer shadowed → server/routes/projectRoutes.js
+[2026-05-06] [docs] TEST_REPORT.md generated from full backend test suite → doc/TEST_REPORT.md
+[2026-05-06] [docs] README_AGENT.md synced with current project state → README_AGENT.md

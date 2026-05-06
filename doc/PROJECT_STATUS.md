@@ -1,13 +1,17 @@
 # PROJECT_STATUS.md
-GENERATED_AT: 2026-05-05T22:18:13+05:30
-UPDATED_AT: 2026-05-05T23:07:18+05:30
+GENERATED_AT: 2026-05-06T08:40:00+05:30
+UPDATED_AT: 2026-05-06T08:40:00+05:30
 GENERATED_BY: agent
-STATUS: CLEAN — awaiting test coverage
+STATUS: CLEAN — test coverage gaps remain
 
 ---
 
 ## 1. PENDING TASKS
 
+- [FIXED] [HIGH] gitleaks binary resolution — scanner now checks: (1) npm package binary, (2) `gitleaks.exe` in project root, (3) system PATH. Project root binary is the current install method → `server/utils/securityScanner.js`
+- [FIXED] [MED]  Created `.gitleaks.toml` config — suppresses false positives from doc placeholder tokens (YOUR_TOKEN_HERE), excludes temp/uploads/scratch/node_modules from scanning → `.gitleaks.toml`
+- [FIXED] [LOW]  `gitleaks` and `gitleaks.exe` added to `.gitignore` — prevents committing the 22MB binary → `.gitignore`
+- [FIXED] [MED]  Gemini model updated: `gemini-1.5-flash` → `gemini-2.0-flash-lite` — fixes 404 API error and improves free-tier quota headroom → `server/utils/aiAnalyzer.js`
 - [FIXED] [HIGH] Fix `require.resolve` in ESM module — replaced with `createRequire` + cross-platform `getGitleaksBinary()` with system PATH fallback → `server/utils/securityScanner.js:1-33`
 - [FIXED] [HIGH] Add `dotenv.config()` call to server entry — `import 'dotenv/config'` added as first line → `server/index.js:1`
 - [FIXED] [HIGH] Populate `.env.example` — all 6 required vars documented with defaults and instructions → `.env.example`
@@ -123,50 +127,15 @@ STATUS: CLEAN — awaiting test coverage
 
 ## 5. MISSING DEPENDENCIES OR CONFIG
 
-- [MISSING] `MONGODB_URI` → `server/config/db.js:5`
-  Type: ENV_VAR
-  Fallback: `mongodb://localhost:27017/git-relic`
-  Note: Not in `.env.example`. Never loaded because `dotenv.config()` is not called.
-
-- [MISSING] `JWT_SECRET` → `server/middleware/authMiddleware.js:11`, `server/routes/authRoutes.js:12`
-  Type: ENV_VAR
-  Fallback: `'dev_jwt_secret_change_me'` (hardcoded literal in source — security risk)
-  Note: Not in `.env.example`. Always uses fallback since `dotenv.config()` is not called.
-
-- [MISSING] `GEMINI_API_KEY` → `server/utils/aiAnalyzer.js:5`
-  Type: ENV_VAR
-  Fallback: `''` (empty string — Gemini SDK throws on any AI call)
-  Note: Not in `.env.example`.
-
-- [MISSING] `VITE_API_BASE_URL` → `src/services/auth.js:1`
-  Type: ENV_VAR
-  Fallback: `http://localhost:8787/api`
-  Note: Not in `.env.example`. No `.env` Vite file present in repo.
-
-- [MISSING] `PORT` → `server/index.js:9`
-  Type: ENV_VAR
-  Fallback: `8787`
-  Note: Not in `.env.example`.
-
-- [MISSING] `CORS_ORIGIN` → `server/index.js:11`
-  Type: ENV_VAR (not yet implemented — currently hardcoded)
-  Note: `http://localhost:5173` is hardcoded. No env-based override exists.
-
-- [MISSING] `dotenv` invocation → `server/index.js`
-  Type: CONFIG_KEY
-  Note: Package is installed but `dotenv.config()` is never called. All env var loading is effectively disabled.
-
-- [MISSING] `temp/` in `.gitignore` → `.gitignore`
-  Type: FILE
-  Note: Runtime directory created by `fileExtractor.js:15`. Not gitignored — will appear as untracked if any uploads are made.
-
-- [MISSING] `uploads/` in `.gitignore` → `.gitignore`
-  Type: FILE
-  Note: Extracted project files stored here. Not gitignored — extracted project source would be committed if present.
-
-- [MISSING] Test framework → `package.json`
-  Type: CONFIG_KEY
-  Note: No `test` script. `npm test` exits code 1 with `Missing script: "test"`. No `vitest`, `jest`, or `mocha` in dependencies.
+- [FIXED] `MONGODB_URI` → all env vars now documented in `.env.example` and loaded via `import 'dotenv/config'` → `server/index.js`
+- [FIXED] `JWT_SECRET` → extracted to `server/config/jwtConfig.js`; fallback is `crypto.randomBytes(64)` not a literal
+- [FIXED] `GEMINI_API_KEY` → documented in `.env.example`; model updated to `gemini-2.0-flash-lite`
+- [FIXED] `VITE_API_BASE_URL` → documented in `.env.example`; present in `.env`
+- [FIXED] `PORT` → documented in `.env.example`; present in `.env`
+- [FIXED] `CORS_ORIGIN` → now reads from env var with fallback → `server/index.js`
+- [FIXED] `dotenv` invocation → `import 'dotenv/config'` added as line 1 of `server/index.js`
+- [FIXED] `temp/` and `uploads/` → both added to `.gitignore`
+- [FIXED] Test framework → `vitest` installed; `npm test` script added; 50 backend tests passing → `server/routes/pitchRoutes.test.js`
 
 ---
 
@@ -201,10 +170,14 @@ STATUS: CLEAN — awaiting test coverage
 
 - `server/data/users.json` rule in `.gitignore` is `server/data/*.local.json` — this only excludes `*.local.json` files, NOT `users.json` itself. `users.json` is tracked by git and will always appear in commits even if it were populated. → `.gitignore:26`
 
-- `uploads/projects/<uuid>/` directories are never deleted after a successful publish — only the temp zip is cleaned up (line 131). Disk usage grows unboundedly. No cleanup job or TTL exists. → `server/routes/projectRoutes.js:130-131`
+- [FIXED] `uploads/projects/<uuid>/` cleanup — `cleanupProjectDir()` added to `fileExtractor.js`; called after publish in `projectRoutes.js` → `server/routes/projectRoutes.js`
 
-- `src/pages/Explore.jsx` filter status labels (`['orphaned', 'auctioning', 'salvaged', 'revived']`) do not match any value in `Project.status` enum (`['pending_scan', 'scanned', 'pending_review', 'published', 'salvaged', 'failed']`). Only `'salvaged'` overlaps. Filters would never match real data even if wired. → `src/pages/Explore.jsx:23`, `server/models/Project.js:22`
+- [FIXED] `src/pages/Explore.jsx` status filter labels — now use correct enum values: `['published', 'pending_review', 'salvaged', 'failed']` → `src/pages/Explore.jsx:10`
 
-- `server/utils/fileExtractor.js:14-15` — top-level `await fs.mkdir(...)` runs at import time. If the file system is not ready or permissions fail, the entire module fails to import and the server crashes silently with an unhandled rejection. → `server/utils/fileExtractor.js:14-15`
+- [FIXED] `server/utils/fileExtractor.js` top-level await — wrapped in `try/catch`; logs FATAL and calls `process.exit(1)` on failure → `server/utils/fileExtractor.js:14-20`
 
-- `src/components/Navbar.jsx` was not examined in detail — should be verified for hardcoded nav links that don't match the actual route map in `App.jsx` (e.g., if it links to `/relic_detail` without a `:projectId` param).
+- [VERIFIED] `src/components/Navbar.jsx` — reviewed. All 4 links (`/explore`, `/drop_project`, `/dashboard`, `/leaderboard`) match routes in `App.jsx`. `Leaderboard.jsx` exists (6971 bytes). No broken links.
+
+- [NEW] gitleaks binary — `gitleaks.exe` placed in project root. `securityScanner.js` updated to detect it via project-root resolution (step 2 of 3-step binary lookup). Binary added to `.gitignore`. `.gitleaks.toml` created to suppress doc placeholder false positives.
+
+- [NEW] Gemini model — updated from deprecated `gemini-1.5-flash` (404) to `gemini-2.0-flash-lite` (better free-tier quota) → `server/utils/aiAnalyzer.js:9`

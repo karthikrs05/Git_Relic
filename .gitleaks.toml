@@ -1,0 +1,30 @@
+title = "CodeRelic Gitleaks Config"
+
+[extend]
+# Use the default ruleset as the base
+useDefault = true
+
+[allowlist]
+description = "Suppress known false positives"
+
+# Placeholder strings used in documentation examples
+regexes = [
+  # Generic placeholder tokens used in curl/API examples in docs
+  '''YOUR_TOKEN_HERE''',
+  '''YOUR_.*_HERE''',
+  '''<YOUR_.*>''',
+  # Test/example values
+  '''example[_-]?(key|token|secret)''',
+]
+
+# Paths to exclude from scanning
+paths = [
+  # Documentation files may contain example tokens
+  '''doc/''',
+  # Runtime directories
+  '''temp/''',
+  '''uploads/''',
+  '''scratch/''',
+  # Node modules
+  '''node_modules/''',
+]
