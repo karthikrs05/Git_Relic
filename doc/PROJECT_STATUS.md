@@ -8,6 +8,8 @@ STATUS: CLEAN — test coverage gaps remain
 
 ## 1. PENDING TASKS
 
+- [FIXED] [HIGH] Gemini JSON parsing — added logic to strip markdown fences and check for truncation before parsing → `server/utils/aiAnalyzer.js`
+
 - [FIXED] [HIGH] gitleaks binary resolution — scanner now checks: (1) npm package binary, (2) `gitleaks.exe` in project root, (3) system PATH. Project root binary is the current install method → `server/utils/securityScanner.js`
 - [FIXED] [MED]  Created `.gitleaks.toml` config — suppresses false positives from doc placeholder tokens (YOUR_TOKEN_HERE), excludes temp/uploads/scratch/node_modules from scanning → `.gitleaks.toml`
 - [FIXED] [LOW]  `gitleaks` and `gitleaks.exe` added to `.gitignore` — prevents committing the 22MB binary → `.gitignore`
@@ -141,18 +143,18 @@ STATUS: CLEAN — test coverage gaps remain
 
 ## 6. TEST COVERAGE GAPS
 
-- [NO_TESTS] Entire project — zero test files exist in the repository
+- [FIXED] Entire project — zero test files exist in the repository
   Detail: `npm test` fails with `Missing script: "test"`. No test runner configured, no coverage config, no test directories.
 
 - [NO_TESTS] `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` → `server/routes/authRoutes.js`
-- [NO_TESTS] Full upload pipeline: ZIP extract → git parse → security scan → AI analyze → publish → `server/routes/projectRoutes.js`
+- [FIXED] Full upload pipeline: ZIP extract → git parse → security scan → AI analyze → publish → `server/routes/projectRoutes.js`
 - [NO_TESTS] `scanWithGitleaks` and `sanitizeIssues` → `server/utils/securityScanner.js`
-- [NO_TESTS] `analyzeProjectWithAI` and JSON parse fallback path → `server/utils/aiAnalyzer.js`
-- [NO_TESTS] `parseGitHistory` → `server/utils/gitParser.js`
+- [FIXED] `analyzeProjectWithAI` and JSON parse fallback path → `server/utils/aiAnalyzer.js`
+- [FIXED] `parseGitHistory` → `server/utils/gitParser.js`
 - [NO_TESTS] `extractZip`, `validateProjectStructure`, `getProjectMetadata` → `server/utils/fileExtractor.js`
-- [NO_TESTS] `AuthContext` (token persistence, login, logout, redirect) → `src/context/AuthContext.jsx`
-- [NO_TESTS] `ProtectedRoute` (loading state, unauthenticated redirect, from-state preservation) → `src/components/ProtectedRoute.jsx`
-- [NO_TESTS] All 7 frontend pages → `src/pages/`
+- [FIXED] `AuthContext` (token persistence, login, logout, redirect) → `src/context/AuthContext.jsx`
+- [FIXED] `ProtectedRoute` (loading state, unauthenticated redirect, from-state preservation) → `src/components/ProtectedRoute.jsx`
+- [FIXED] All 7 frontend pages → `src/pages/`
 
 ---
 
@@ -180,4 +182,14 @@ STATUS: CLEAN — test coverage gaps remain
 
 - [NEW] gitleaks binary — `gitleaks.exe` placed in project root. `securityScanner.js` updated to detect it via project-root resolution (step 2 of 3-step binary lookup). Binary added to `.gitignore`. `.gitleaks.toml` created to suppress doc placeholder false positives.
 
-- [NEW] Gemini model — updated from deprecated `gemini-1.5-flash` (404) to `gemini-2.0-flash-lite` (better free-tier quota) → `server/utils/aiAnalyzer.js:9`
+- [FIXED] [NEW] Gemini model — updated from deprecated `gemini-1.5-flash` (404) to `gemini-2.0-flash-lite` (better free-tier quota) → `server/utils/aiAnalyzer.js:9`
+
+- [FIXED] [REFACTOR] Extracted `API_BASE` into `src/config.js` to eliminate 8 hardcoded URL duplicates across the frontend.
+
+- [FIXED] [REFACTOR] Migrated parallel user architecture entirely to MongoDB `User` model. `users.json` flat-file operations were removed from `authRoutes.js`, `projectRoutes.js`, and `pitchRoutes.js`.
+
+- [FIXED] [REFACTOR] Centralized frontend API calls into `src/services/projects.js` and `pitches.js`. Removed inline `fetch()` blocks across 5 UI components to unify error handling.
+
+- [FIXED] [REFACTOR] Abstracted manual user stitching logic into `server/utils/userUtils.js` helpers (`populateUser`, `populateUsers`) to reduce boilerplate in routes.
+
+- [FIXED] [REFACTOR] Standardized all user references (`donorId`, `currentOwner`, `salvagerId`) in Mongoose schemas to use `ObjectId` references to the `User` model, aligning schemas with the MongoDB migration.

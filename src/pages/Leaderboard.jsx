@@ -4,7 +4,7 @@ import TerminalCard from '../components/TerminalCard';
 import StatusBadge from '../components/StatusBadge';
 import NeonButton from '../components/NeonButton';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { API_BASE } from '../config.js';
 
 // Decorative fallback shown while loading or when no salvages exist yet
 const MOCK_ENTRIES = [

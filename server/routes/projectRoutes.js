@@ -4,7 +4,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "node:url";
 import { authMiddleware } from "../middleware/authMiddleware.js";
-import { readUsers } from "./authRoutes.js";
+import { populateUser, populateUsers } from "../utils/userUtils.js";
 import Project from "../models/Project.js";
 import SecurityScanLog from "../models/SecurityScanLog.js";
 import {
@@ -242,14 +242,16 @@ router.get("/list", async (_req, res) => {
       .select("title description techStack commitCount lastActivity metadata createdAt donorId")
       .lean();
 
-    const users = await readUsers();
+    const donorIds = projects.map(p => p.donorId);
+    const users = await populateUsers(donorIds);
     const stitched = projects.map(p => {
-      const donor = users.find(u => u.id === p.donorId);
+      const donor = users.find(u => u._id.toString() === p.donorId);
       return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
     });
 
     res.json(stitched);
   } catch (error) {
+    console.error('List projects error:', error.message, error.stack);
     res.status(500).json({ message: "Failed to fetch projects" });
   }
 });
@@ -302,10 +304,11 @@ router.get("/leaderboard", async (_req, res) => {
       { $limit: 20 },
     ]);
 
-    const users = await readUsers();
+    const userIds = salvageStats.map(e => e._id);
+    const users = await populateUsers(userIds);
 
     const leaderboard = salvageStats.map((entry, index) => {
-      const user = users.find((u) => u.id === entry._id);
+      const user = users.find((u) => u._id.toString() === entry._id);
       return {
         rank: index + 1,
         userId: entry._id,
@@ -330,10 +333,11 @@ router.get("/status/pending-review", authMiddleware, async (req, res) => {
   }
   try {
     const projects = await Project.find({ status: "pending_review" }).lean();
-    const users = await readUsers();
+    const donorIds = projects.map(p => p.donorId);
+    const users = await populateUsers(donorIds);
     
     const stitched = projects.map(p => {
-      const donor = users.find(u => u.id === p.donorId);
+      const donor = users.find(u => u._id.toString() === p.donorId);
       return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
     });
 
@@ -351,9 +355,8 @@ router.get("/:projectId", async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const users = await readUsers();
-    const donor = users.find(u => u.id === project.donorId);
-    const owner = users.find(u => u.id === project.currentOwner);
+    const donor = await populateUser(project.donorId);
+    const owner = await populateUser(project.currentOwner);
 
     project.donorId = { username: donor ? donor.username : "unknown" };
     project.currentOwner = { username: owner ? owner.username : "unknown" };

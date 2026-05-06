@@ -203,5 +203,50 @@
         "message": "Authenticated via backend session."
       }
     ]
+  },
+  {
+    "userId": "69fac08b8c561a288a18222f",
+    "username": "Sra_",
+    "email": "admin@gmail.com",
+    "createdAt": "2026-05-06T04:16:11.718Z",
+    "lastLoginAt": "2026-05-06T04:25:18.226Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-06T04:16:11.725Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-06T04:25:18.193Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
+  },
+  {
+    "userId": "69fac5283d44ba79107c1b98",
+    "username": "admin",
+    "email": "admin@gmail.com",
+    "createdAt": "2026-05-06T04:35:52.385Z",
+    "lastLoginAt": "2026-05-06T04:35:52.420Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-06T04:35:52.392Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      }
+    ]
   }
 ]

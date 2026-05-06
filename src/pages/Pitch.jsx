@@ -6,7 +6,7 @@ import MonospaceInput from '../components/MonospaceInput';
 import NeonButton from '../components/NeonButton';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { submitPitch } from '../services/pitches.js';
 
 export default function Pitch() {
   const { token } = useAuth();
@@ -34,16 +34,7 @@ export default function Pitch() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch(`${API_BASE}/pitches`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ projectId, pitchText: text, prLink: prLink || undefined }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Submission failed');
+      await submitPitch(projectId, { pitchText: text, prLink: prLink || undefined }, token);
       setSubmitted(true);
     } catch (err) {
       setError(err.message);

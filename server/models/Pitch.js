@@ -7,7 +7,8 @@ const pitchSchema = new mongoose.Schema({
     required: true,
   },
   salvagerId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
   },
   pitchText: {

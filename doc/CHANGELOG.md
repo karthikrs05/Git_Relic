@@ -1,6 +1,8 @@
 # CHANGELOG.md
 > One-line entries per fix. Format: [YYYY-MM-DD] [type] description → file
 
+[2026-05-06] [fix] Fixed Gemini JSON parsing by stripping markdown fences and adding length guards, preventing crashes on truncated AI responses → server/utils/aiAnalyzer.js
+
 [2026-05-05] [fix] Added `import 'dotenv/config'` as line 1 — env vars now load from .env on server start → server/index.js
 [2026-05-05] [fix] Replaced `require.resolve` with `createRequire` + cross-platform `getGitleaksBinary()` — fixes ESM crash and Windows/macOS binary mismatch → server/utils/securityScanner.js
 [2026-05-05] [fix] Moved `GET /status/pending-review` before `/:projectId` catch-all — correct route declaration order → server/routes/projectRoutes.js
@@ -54,5 +56,8 @@
 [2026-05-06] [fix] pitch body field renamed pitchText → message → server/routes/pitchRoutes.js
 [2026-05-06] [fix] alias route added GET /api/pitches/:projectId → server/routes/pitchRoutes.js
 [2026-05-06] [fix] route ordering fixed, pending-review no longer shadowed → server/routes/projectRoutes.js
-[2026-05-06] [docs] TEST_REPORT.md generated from full backend test suite → doc/TEST_REPORT.md
-[2026-05-06] [docs] README_AGENT.md synced with current project state → README_AGENT.md
+[2026-05-06] [test] Added projectRoutes tests covering upload, list, getById, user, and pending-review endpoints → server/routes/projectRoutes.test.js
+[2026-05-06] [test] Added util tests for aiAnalyzer and gitParser → server/utils/*.test.js
+[2026-05-06] [test] Expanded pitchRoutes tests to fully cover 403 and 404 paths for accepting and rejecting pitches → server/routes/pitchRoutes.test.js
+[2026-05-06] [test] Added frontend tests for AuthContext and ProtectedRoute → src/context/*.test.jsx, src/components/*.test.jsx
+[2026-05-06] [test] Added frontend smoke tests for all pages → src/pages/__tests__/*.test.jsx

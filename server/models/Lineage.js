@@ -7,13 +7,15 @@ const lineageSchema = new mongoose.Schema({
     required: true,
   },
   parentProjectId: mongoose.Schema.Types.ObjectId,
-  donor: {
-    userId: String,
-    username: String,
+  donorId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
   },
-  salvager: {
-    userId: String,
-    username: String,
+  salvagerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
   },
   generationNumber: {
     type: Number,

@@ -20,10 +20,6 @@ vi.mock('node:fs/promises', () => ({
       throw Object.assign(new Error('File not found'), { code: 'ENOENT' });
     }),
     writeFile: vi.fn(async (filePath, data) => {
-      if (filePath.includes('users.json')) {
-        mockUsers.length = 0;
-        mockUsers.push(...JSON.parse(data));
-      }
       if (filePath.includes('accounts.json')) {
         mockAccounts.length = 0;
         mockAccounts.push(...JSON.parse(data));
@@ -31,6 +27,19 @@ vi.mock('node:fs/promises', () => ({
     }),
   },
 }));
+
+const MockUser = vi.fn(function(data) {
+  Object.assign(this, data);
+  this._id = data._id || 'mock-user-id-' + Math.random().toString(36).substring(7);
+  this.save = vi.fn(async () => {
+    mockUsers.push(this);
+    return this;
+  });
+});
+MockUser.findOne = vi.fn(async (query) => mockUsers.find(u => u.email === query.email) || null);
+MockUser.findById = vi.fn(async (id) => mockUsers.find(u => u._id === id || u.id === id) || null);
+
+vi.mock('../models/User.js', () => ({ default: MockUser }));
 
 // Dynamic import after mocks
 const { default: authRoutes } = await import('../routes/authRoutes.js');

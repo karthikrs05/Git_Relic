@@ -3,25 +3,15 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { JWT_SECRET } from '../config/jwtConfig.js';
+import User from '../models/User.js';
 
 const router = Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const usersFile = path.join(__dirname, '..', 'data', 'users.json');
 const accountsFile = path.join(__dirname, '..', 'data', 'accounts.json');
-
-export async function readUsers() {
-  const raw = await fs.readFile(usersFile, 'utf-8');
-  return JSON.parse(raw);
-}
-
-async function writeUsers(users) {
-  await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
-}
 
 async function readAccounts() {
   try {
@@ -40,7 +30,7 @@ async function writeAccounts(accounts) {
 function createAccount(user, overrides = {}) {
   const now = new Date().toISOString();
   return {
-    userId: user.id,
+    userId: user.id || user._id.toString(),
     username: user.username,
     email: user.email,
     createdAt: user.createdAt || now,
@@ -60,9 +50,10 @@ function createAccount(user, overrides = {}) {
 
 function publicUser(user, account) {
   return {
-    id: user.id,
+    id: user.id || user._id.toString(),
     username: user.username,
     email: user.email,
+    bio: user.bio,
     createdAt: user.createdAt,
     account,
   };
@@ -70,7 +61,8 @@ function publicUser(user, account) {
 
 async function upsertAccountForUser(user, overrides = {}) {
   const accounts = await readAccounts();
-  const existingIndex = accounts.findIndex((account) => account.userId === user.id);
+  const userIdStr = user.id || user._id.toString();
+  const existingIndex = accounts.findIndex((account) => account.userId === userIdStr);
   const nextAccount = existingIndex === -1
     ? createAccount(user, overrides)
     : {
@@ -105,7 +97,7 @@ async function upsertAccountForUser(user, overrides = {}) {
 
 function signToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, username: user.username },
+    { id: user.id || user._id.toString(), email: user.email, username: user.username },
     JWT_SECRET,
     { expiresIn: '7d' }
   );
@@ -118,28 +110,24 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'username, email and password are required' });
     }
 
-    const users = await readUsers();
     const normalizedEmail = String(email).trim().toLowerCase();
-    const exists = users.find((u) => u.email === normalizedEmail);
+    const exists = await User.findOne({ email: normalizedEmail });
     if (exists) return res.status(409).json({ message: 'User already exists' });
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = {
-      id: randomUUID(),
+    const user = new User({
       username: String(username).trim(),
       email: normalizedEmail,
       passwordHash,
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(user);
-    await writeUsers(users);
+    });
+    
+    await user.save();
 
     const account = await upsertAccountForUser(user);
-
     const token = signToken(user);
     return res.status(201).json({ token, user: publicUser(user, account) });
-  } catch {
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: 'Failed to register user' });
   }
 });
@@ -151,9 +139,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'email and password are required' });
     }
 
-    const users = await readUsers();
     const normalizedEmail = String(email).trim().toLowerCase();
-    const user = users.find((u) => u.email === normalizedEmail);
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) return res.status(401).json({ message: 'Invalid credentials' });
 
     const valid = await bcrypt.compare(password, user.passwordHash);
@@ -166,19 +153,20 @@ router.post('/login', async (req, res) => {
     });
     const token = signToken(user);
     return res.json({ token, user: publicUser(user, account) });
-  } catch {
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: 'Failed to login' });
   }
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
   try {
-    const users = await readUsers();
-    const user = users.find((u) => u.id === req.user.id);
+    const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     const account = await upsertAccountForUser(user);
     return res.json(publicUser(user, account));
-  } catch {
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: 'Failed to fetch user profile' });
   }
 });
@@ -190,16 +178,16 @@ router.patch('/me', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'bio field is required' });
     }
 
-    const users = await readUsers();
-    const idx = users.findIndex((u) => u.id === req.user.id);
-    if (idx === -1) return res.status(404).json({ message: 'User not found' });
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    users[idx].bio = String(bio).trim();
-    await writeUsers(users);
+    user.bio = String(bio).trim();
+    await user.save();
 
-    const account = await upsertAccountForUser(users[idx]);
-    return res.json(publicUser(users[idx], account));
-  } catch {
+    const account = await upsertAccountForUser(user);
+    return res.json(publicUser(user, account));
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: 'Failed to update profile' });
   }
 });

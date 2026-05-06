@@ -4,7 +4,8 @@ import PageTransition from '../components/PageTransition';
 import TerminalCard from '../components/TerminalCard';
 import NeonButton from '../components/NeonButton';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { getProjectById, getProjectAnalysis } from '../services/projects.js';
+import { getPitchesForProject } from '../services/pitches.js';
 
 export default function RelicDetail() {
   const { projectId } = useParams();
@@ -21,15 +22,9 @@ export default function RelicDetail() {
     async function load() {
       setLoading(true);
       try {
-        const [projRes, analysisRes, pitchesRes] = await Promise.all([
-          fetch(`${API_BASE}/projects/${projectId}`),
-          fetch(`${API_BASE}/projects/${projectId}/analysis`),
-          fetch(`${API_BASE}/pitches/project/${projectId}`),
-        ]);
-        if (projRes.ok) setProject(await projRes.json());
-        else setError('Project not found.');
-        if (analysisRes.ok) setAnalysis((await analysisRes.json()).aiAnalysis);
-        if (pitchesRes.ok) setPitches(await pitchesRes.json());
+        try { setProject(await getProjectById(projectId)); } catch { setError('Project not found.'); }
+        try { setAnalysis((await getProjectAnalysis(projectId)).aiAnalysis); } catch {}
+        try { setPitches(await getPitchesForProject(projectId)); } catch {}
       } catch {
         setError('Failed to load project data.');
       } finally {

@@ -3,11 +3,13 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     globals: true,
+    setupFiles: ['./src/setupTests.js'],
     // Default environment for server-side tests
     environment: 'node',
     // Switch to jsdom for anything under src/
     environmentMatchGlobs: [
-      ['src/**/*.test.{js,jsx}', 'jsdom'],
+      ['src/**/*.test.js', 'jsdom'],
+      ['src/**/*.test.jsx', 'jsdom'],
     ],
     coverage: {
       provider: 'v8',

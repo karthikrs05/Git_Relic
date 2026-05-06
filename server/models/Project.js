@@ -2,7 +2,8 @@ import mongoose from 'mongoose';
 
 const projectSchema = new mongoose.Schema({
   donorId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     required: true,
   },
   title: String,
@@ -35,7 +36,8 @@ const projectSchema = new mongoose.Schema({
   },
   storageLocation: String,
   currentOwner: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
     default: function() {
       return this.donorId;
     },

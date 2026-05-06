@@ -49,6 +49,11 @@ vi.mock('../models/Lineage.js', () => ({
   }),
 }));
 
+vi.mock('../utils/userUtils.js', () => ({
+  populateUser: vi.fn(async (id) => ({ _id: { toString: () => String(id) }, username: 'mockuser' })),
+  populateUsers: vi.fn(async (ids) => ids.map(id => ({ _id: { toString: () => String(id) }, username: 'mockuser' }))),
+}));
+
 const { default: pitchRoutes } = await import('../routes/pitchRoutes.js');
 
 function buildApp() {
@@ -133,7 +138,7 @@ describe('GET /api/pitches/project/:projectId', () => {
     mockPitchFind.mockReturnValue({
       populate: vi.fn().mockReturnThis(),
       sort: vi.fn().mockReturnThis(),
-      lean: vi.fn().mockResolvedValue([{ _id: 'p1', pitchText: 'test' }]),
+      lean: vi.fn().mockResolvedValue([{ _id: 'p1', pitchText: 'test', salvagerId: 'salvager-user-id' }]),
     });
     const res = await request(buildApp()).get('/api/pitches/project/project-id-1');
     expect(res.status).toBe(200);
@@ -198,5 +203,31 @@ describe('PATCH /api/pitches/:pitchId/respond', () => {
       .send({ decision: 'rejected' });
     expect(res.status).toBe(200);
     expect(mockPitchUpdateMany).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when accepting an invalid pitchId', async () => {
+    mockPitchFindById.mockResolvedValue(null);
+    const res = await request(buildApp())
+      .patch('/api/pitches/invalid-id/respond')
+      .set('Authorization', `Bearer ${donorToken}`)
+      .send({ decision: 'accepted' });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 when rejecting an invalid pitchId', async () => {
+    mockPitchFindById.mockResolvedValue(null);
+    const res = await request(buildApp())
+      .patch('/api/pitches/invalid-id/respond')
+      .set('Authorization', `Bearer ${donorToken}`)
+      .send({ decision: 'rejected' });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 403 when non-owner tries to reject', async () => {
+    const res = await request(buildApp())
+      .patch('/api/pitches/pitch-id-1/respond')
+      .set('Authorization', `Bearer ${makeToken()}`) // salvager, not donor
+      .send({ decision: 'rejected' });
+    expect(res.status).toBe(403);
   });
 });

@@ -3,8 +3,7 @@ import { authMiddleware } from '../middleware/authMiddleware.js';
 import Pitch from '../models/Pitch.js';
 import Project from '../models/Project.js';
 import Lineage from '../models/Lineage.js';
-import { readUsers } from './authRoutes.js';
-
+import { populateUser, populateUsers } from '../utils/userUtils.js';
 const router = Router();
 
 // POST /api/pitches — submit a pitch (salvagers only)
@@ -43,9 +42,10 @@ router.get('/project/:projectId', async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    const users = await readUsers();
+    const salvagerIds = pitches.map(p => p.salvagerId);
+    const users = await populateUsers(salvagerIds);
     const stitched = pitches.map(p => {
-      const salvager = users.find(u => u.id === p.salvagerId);
+      const salvager = users.find(u => u._id.toString() === p.salvagerId);
       return { ...p, salvagerId: { username: salvager ? salvager.username : 'unknown' } };
     });
 
@@ -73,8 +73,7 @@ router.get('/:pitchId', async (req, res) => {
     const pitch = await Pitch.findById(req.params.pitchId).lean();
     if (!pitch) return res.status(404).json({ message: 'Pitch not found' });
 
-    const users = await readUsers();
-    const salvager = users.find(u => u.id === pitch.salvagerId);
+    const salvager = await populateUser(pitch.salvagerId);
     pitch.salvagerId = { username: salvager ? salvager.username : 'unknown' };
 
     res.json(pitch);
@@ -114,8 +113,8 @@ router.patch('/:pitchId/respond', authMiddleware, async (req, res) => {
       // Create lineage record
       await new Lineage({
         projectId:    project._id,
-        donor:        { userId: project.donorId },
-        salvager:     { userId: pitch.salvagerId },
+        donorId:      project.donorId,
+        salvagerId:   pitch.salvagerId,
         transferredAt: new Date(),
       }).save();
 

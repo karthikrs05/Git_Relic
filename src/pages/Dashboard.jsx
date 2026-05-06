@@ -5,7 +5,8 @@ import TerminalCard from '../components/TerminalCard';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { getUserProjects } from '../services/projects.js';
+import { getUserPitches } from '../services/pitches.js';
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
@@ -22,16 +23,12 @@ export default function Dashboard() {
     async function load() {
       setLoading(true);
       try {
-        const [projRes, pitchRes] = await Promise.all([
-          fetch(`${API_BASE}/projects/user/${user.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${API_BASE}/pitches/user/my`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+        const [projData, pitchData] = await Promise.all([
+          getUserProjects(user.id || user._id, token).catch(() => []),
+          getUserPitches(token).catch(() => [])
         ]);
-        if (projRes.ok)  setDroppedProjects(await projRes.json());
-        if (pitchRes.ok) setMyPitches(await pitchRes.json());
+        setDroppedProjects(projData);
+        setMyPitches(pitchData);
       } finally {
         setLoading(false);
       }

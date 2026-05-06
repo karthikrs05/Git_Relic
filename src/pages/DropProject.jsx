@@ -5,7 +5,7 @@ import TerminalCard from '../components/TerminalCard';
 import NeonButton from '../components/NeonButton';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { uploadProject } from '../services/projects.js';
 const steps = ['Upload repo', 'Security scan', 'Autopsy preview', 'Published'];
 
 export default function DropProject() {
@@ -22,15 +22,7 @@ export default function DropProject() {
     setLoading(true);
     setError('');
     try {
-      const form = new FormData();
-      form.append('projectZip', file);
-      const res = await fetch(`${API_BASE}/projects/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Upload failed');
+      const data = await uploadProject(file, token);
       setResult(data);
       setStep(2);
     } catch (err) {

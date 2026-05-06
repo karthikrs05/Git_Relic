@@ -5,7 +5,7 @@ import TerminalCard from '../components/TerminalCard';
 import MonospaceInput from '../components/MonospaceInput';
 import StatusBadge from '../components/StatusBadge';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { listProjects } from '../services/projects.js';
 const TECH_OPTIONS   = ['React', 'Node', 'Rust', 'Python', 'Go', 'TypeScript'];
 const STATUS_OPTIONS = ['published', 'pending_review', 'salvaged', 'failed'];
 
@@ -23,9 +23,7 @@ export default function Explore() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch(`${API_BASE}/projects/list`);
-        if (!res.ok) throw new Error('Failed to fetch projects');
-        setProjects(await res.json());
+        setProjects(await listProjects());
       } catch (err) {
         setError(err.message);
       } finally {

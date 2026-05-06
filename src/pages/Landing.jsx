@@ -9,7 +9,7 @@ import StatCounter from '../components/StatCounter';
 import StatusBadge from '../components/StatusBadge';
 import { logs } from '../data/mockData';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787/api';
+import { API_BASE } from '../config.js';
 
 export default function Landing() {
   const navigate = useNavigate();
