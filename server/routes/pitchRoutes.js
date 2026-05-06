@@ -45,7 +45,7 @@ router.get('/project/:projectId', async (req, res) => {
     const salvagerIds = pitches.map(p => p.salvagerId);
     const users = await populateUsers(salvagerIds);
     const stitched = pitches.map(p => {
-      const salvager = users.find(u => u._id.toString() === p.salvagerId);
+      const salvager = users.find(u => u._id.toString() === String(p.salvagerId));
       return { ...p, salvagerId: { username: salvager ? salvager.username : 'unknown' } };
     });
 

@@ -7,9 +7,11 @@ async function request(path, options = {}) {
   return data;
 }
 
-export function uploadProject(file, token) {
+export function uploadProject({ file, title, description }, token) {
   const formData = new FormData();
   formData.append('projectZip', file);
+  if (title) formData.append('title', title);
+  if (description) formData.append('description', description);
   return request('/projects/upload', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },

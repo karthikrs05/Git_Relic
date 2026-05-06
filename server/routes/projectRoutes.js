@@ -58,6 +58,9 @@ router.post(
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
+      if (!req.body.title || !req.body.title.trim()) {
+        return res.status(400).json({ message: "Project title is required" });
+      }
 
       tempFilePath = req.file.path;
       const extractId = randomUUID();
@@ -76,6 +79,8 @@ router.post(
 
       // Create project record (initially in pending_scan status)
       const project = new Project({
+        title: req.body.title || req.file.originalname.replace('.zip', ''),
+        description: req.body.description || '',
         donorId: req.user.id,
         currentOwner: req.user.id,
         storageLocation: projectDir,
@@ -239,13 +244,13 @@ router.post("/:projectId/analyze", authMiddleware, async (req, res) => {
 router.get("/list", async (_req, res) => {
   try {
     const projects = await Project.find({ status: "published" })
-      .select("title description techStack commitCount lastActivity metadata createdAt donorId")
+      .select("title description techStack commitCount lastActivity metadata createdAt donorId status")
       .lean();
 
     const donorIds = projects.map(p => p.donorId);
     const users = await populateUsers(donorIds);
     const stitched = projects.map(p => {
-      const donor = users.find(u => u._id.toString() === p.donorId);
+      const donor = users.find(u => u._id.toString() === String(p.donorId));
       return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
     });
 
@@ -305,7 +310,7 @@ router.get("/status/pending-review", authMiddleware, async (req, res) => {
     const users = await populateUsers(donorIds);
     
     const stitched = projects.map(p => {
-      const donor = users.find(u => u._id.toString() === p.donorId);
+      const donor = users.find(u => u._id.toString() === String(p.donorId));
       return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
     });
 

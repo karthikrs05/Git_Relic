@@ -98,7 +98,7 @@ STATUS: CLEAN — test coverage gaps remain
   Status: RESOLVED 2026-05-05 — All tabs show live API data. Mock data removed.
 
 - [FIXED] `RelicDetail` page
-  Status: RESOLVED 2026-05-05 — Route param added. Fetches real project, analysis, and pitches.
+  Status: RESOLVED 2026-05-06 — Route param added. Fetches real project, analysis, and pitches. `project.description` and `project.gitHistory` (scrollable commit list, up to 10 entries) now rendered in the autopsy panel. All required fields displayed: title, description, techStack, status, commitCount, donorId, currentOwner, gitHistory, aiAnalysis.
 
 - [FIXED] Pitch API backend
   Status: RESOLVED 2026-05-05 — Full CRUD implemented in `pitchRoutes.js`.
@@ -166,7 +166,7 @@ STATUS: CLEAN — test coverage gaps remain
 
 - `server/index.js` lists `dotenv` in `package.json` dependencies but contains zero `dotenv` related code. Every env var in the server uses its hardcoded fallback value on every startup. → `server/index.js`
 
-- `src/pages/RelicDetail.jsx` does not import `useParams`. The route `/relic_detail` in `App.jsx` has no `:projectId` param segment anyway (line 22). Two fixes needed: add `:projectId` to the route AND add `useParams` to the page. → `src/App.jsx:22`, `src/pages/RelicDetail.jsx:1`
+- [FIXED] `src/pages/RelicDetail.jsx` — `useParams` imports `projectId`, route in `App.jsx` is `/relic_detail/:projectId`, Explore navigates via `navigate('/relic_detail/${project._id}')`. All three are aligned. Description and gitHistory now rendered. → `src/App.jsx:30`, `src/pages/RelicDetail.jsx`, `src/pages/Explore.jsx:108`
 
 - `server/utils/securityScanner.js:40-50` — the catch block masks the `ReferenceError` from `require.resolve`. The upload route sees `passed: false` and sets project status to `pending_review` instead of throwing. The caller logs the error but the HTTP response message is just `"Project blocked: Security issues detected"` — the root cause is invisible to the API consumer. → `server/utils/securityScanner.js:40-50`, `server/routes/projectRoutes.js:114-118`
 

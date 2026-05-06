@@ -13,16 +13,19 @@ export default function DropProject() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [file, setFile] = useState(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
 
   async function handleUpload() {
     if (!file) { setError('Select a .zip file first.'); return; }
+    if (!title.trim()) { setError('Project title is required.'); return; }
     setLoading(true);
     setError('');
     try {
-      const data = await uploadProject(file, token);
+      const data = await uploadProject({ file, title, description }, token);
       setResult(data);
       setStep(2);
     } catch (err) {
@@ -78,6 +81,23 @@ export default function DropProject() {
                 selected: {file.name} ({(file.size / 1024 / 1024).toFixed(1)} MB)
               </p>
             )}
+
+            <div className="pt-4 space-y-3">
+              <input
+                type="text"
+                placeholder="Project Title (required)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-lg border border-ghost-accent bg-black/40 p-2 text-sm text-ghost-white focus:border-ghost-primary focus:outline-none"
+              />
+              <textarea
+                placeholder="Project Description (optional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full rounded-lg border border-ghost-accent bg-black/40 p-2 text-sm text-ghost-white focus:border-ghost-primary focus:outline-none"
+              />
+            </div>
           </div>
         )}
 

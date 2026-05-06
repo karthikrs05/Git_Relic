@@ -48,6 +48,9 @@ export default function RelicDetail() {
           <TerminalCard className="p-5">
             <p className="mb-1 text-xs text-ghost-white/50">project_autopsy</p>
             <h1 className="mb-4 text-xl font-bold text-ghost-primary">{project.title || projectId}</h1>
+            {project.description && (
+              <p className="mb-4 text-sm text-ghost-white/80">{project.description}</p>
+            )}
 
             {/* Language distribution */}
             {langs.length > 0 && (
@@ -86,6 +89,21 @@ export default function RelicDetail() {
               </div>
             ) : (
               <p className="text-sm text-ghost-white/40">ai_analysis: not available</p>
+            )}
+
+            {/* Git History */}
+            {project.gitHistory && project.gitHistory.length > 0 && (
+              <div className="mt-6 space-y-2 text-sm">
+                <p className="mb-2 text-ghost-primary">git_history (latest)</p>
+                <div className="max-h-48 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+                  {project.gitHistory.slice(0, 10).map((commit, i) => (
+                    <div key={i} className="border-l-2 border-ghost-accent pl-2 text-xs">
+                      <p className="font-mono text-ghost-white/80">{commit.hash?.substring(0, 7) || 'unknown'}</p>
+                      <p className="text-ghost-white/60">{commit.message || commit}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </TerminalCard>
 

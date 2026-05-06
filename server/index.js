@@ -21,6 +21,10 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'git-relic-api' });
 });
 
+app.get('/api', (_req, res) => {
+  res.json({ status: 'ok', service: 'git-relic-api', message: 'API root is accessible' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/pitches', pitchRoutes);

@@ -61,3 +61,9 @@
 [2026-05-06] [test] Expanded pitchRoutes tests to fully cover 403 and 404 paths for accepting and rejecting pitches → server/routes/pitchRoutes.test.js
 [2026-05-06] [test] Added frontend tests for AuthContext and ProtectedRoute → src/context/*.test.jsx, src/components/*.test.jsx
 [2026-05-06] [test] Added frontend smoke tests for all pages → src/pages/__tests__/*.test.jsx
+[2026-05-06] [feat] RelicDetail.jsx now renders project.description below the title — was silently omitted despite field existing in API response → src/pages/RelicDetail.jsx
+[2026-05-06] [feat] RelicDetail.jsx now renders project.gitHistory (up to 10 commits, hash + message) in a scrollable git_history panel — field was fetched but not displayed → src/pages/RelicDetail.jsx
+[2026-05-06] [fix] TerminalCard was swallowing onClick — component only destructured children/className/hover; added `...rest` spread so onClick (and all other props) forward to motion.div. Fixes unclickable Explore cards → src/components/TerminalCard.jsx
+[2026-05-06] [fix] "unknown" fields in UI: Project title now populated from zip originalname during upload, status added to select() in /list route so StatusBadge renders correctly, and donorId/salvagerId ObjectId population mismatch fixed using String(p.donorId) → server/routes/projectRoutes.js, server/routes/pitchRoutes.js
+[2026-05-06] [feat] Added `GET /api` root endpoint returning 200 OK so manual browser navigation to the API base URL doesn't show "Cannot GET" → server/index.js
+[2026-05-06] [feat] Added custom Title and Description inputs to the Drop Project wizard. Project titles are no longer stuck as "unknown project" in the Dashboard. Also ran a one-off database script to fix legacy projects lacking titles to "Untitled Relic" → src/pages/DropProject.jsx, src/services/projects.js, server/routes/projectRoutes.js
