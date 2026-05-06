@@ -294,38 +294,6 @@ function isAdmin(req) {
 }
 
 // Literal routes must be declared before /:projectId to avoid ambiguity
-router.get("/leaderboard", async (_req, res) => {
-  try {
-    // Aggregate salvaged projects grouped by currentOwner
-    const salvageStats = await Project.aggregate([
-      { $match: { status: "salvaged" } },
-      { $group: { _id: "$currentOwner", salvaged: { $sum: 1 } } },
-      { $sort: { salvaged: -1 } },
-      { $limit: 20 },
-    ]);
-
-    const userIds = salvageStats.map(e => e._id);
-    const users = await populateUsers(userIds);
-
-    const leaderboard = salvageStats.map((entry, index) => {
-      const user = users.find((u) => u._id.toString() === entry._id);
-      return {
-        rank: index + 1,
-        userId: entry._id,
-        username: user ? user.username : "unknown",
-        salvaged: entry.salvaged,
-        // reputation is a simple score: salvaged × 100 + a small positional bonus
-        reputation: entry.salvaged * 100 + Math.max(0, (20 - index) * 5),
-      };
-    });
-
-    res.json(leaderboard);
-  } catch (error) {
-    console.error("Leaderboard error:", error.message);
-    res.status(500).json({ message: "Failed to fetch leaderboard" });
-  }
-});
-
 router.get("/status/pending-review", authMiddleware, async (req, res) => {
 
   if (!isAdmin(req)) {
@@ -369,9 +337,15 @@ router.get("/:projectId", async (req, res) => {
 
 router.get("/user/:userId", authMiddleware, async (req, res) => {
   try {
+    if (req.params.userId !== req.user.id && !isAdmin(req)) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Dashboard uses this to show projects the user has dropped (donor view),
+    // even after ownership is transferred via pitch acceptance.
     const projects = await Project.find({
-      currentOwner: req.params.userId,
-    }).select("title status createdAt commitCount metadata");
+      donorId: req.params.userId,
+    }).select("title status createdAt commitCount metadata currentOwner");
 
     res.json(projects);
   } catch (error) {

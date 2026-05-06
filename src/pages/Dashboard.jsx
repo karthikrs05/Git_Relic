@@ -6,16 +6,19 @@ import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 
 import { getUserProjects } from '../services/projects.js';
-import { getUserPitches } from '../services/pitches.js';
+import { acceptPitch, getIncomingPitches, getUserPitches, rejectPitch } from '../services/pitches.js';
+import { getMyInsights } from '../services/insights.js';
 
 export default function Dashboard() {
   const { user, token, logout } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('dropped relics');
-  const tabs = ['dropped relics', 'salvaged relics', 'pitch tracker'];
+  const tabs = ['dropped relics', 'salvaged relics', 'incoming requests', 'pitch tracker'];
 
   const [droppedProjects, setDroppedProjects] = useState([]);
   const [myPitches, setMyPitches] = useState([]);
+  const [incomingPitches, setIncomingPitches] = useState([]);
+  const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,12 +26,16 @@ export default function Dashboard() {
     async function load() {
       setLoading(true);
       try {
-        const [projData, pitchData] = await Promise.all([
+        const [projData, pitchData, incomingData, insightsData] = await Promise.all([
           getUserProjects(user.id || user._id, token).catch(() => []),
-          getUserPitches(token).catch(() => [])
+          getUserPitches(token).catch(() => []),
+          getIncomingPitches(token).catch(() => []),
+          getMyInsights(token).catch(() => null),
         ]);
         setDroppedProjects(projData);
         setMyPitches(pitchData);
+        setIncomingPitches(incomingData);
+        setInsights(insightsData);
       } finally {
         setLoading(false);
       }
@@ -37,14 +44,38 @@ export default function Dashboard() {
   }, [user?.id, token]);
 
   const salvaged      = droppedProjects.filter((p) => p.status === 'salvaged');
+  const droppedRelics = droppedProjects.filter((p) => p.status !== 'salvaged');
   const activePitches = myPitches.filter((p) => p.status === 'pending');
+  const incomingPending = incomingPitches.filter((p) => p.status === 'pending');
 
   const stats = [
-    ['relic points',      droppedProjects.length * 100],
-    ['dropped projects',  droppedProjects.length],
+    ['reputation points', insights?.reputationPoints ?? 0],
+    ['dropped projects',  droppedRelics.length],
     ['salvaged projects', salvaged.length],
-    ['active pitches',    activePitches.length],
+    ['incoming requests', incomingPending.length],
   ];
+
+  async function respondToPitch(pitchId, decision) {
+    if (!token) return;
+    setLoading(true);
+    try {
+      if (decision === 'accepted') await acceptPitch(pitchId, token);
+      else await rejectPitch(pitchId, token);
+
+      const [projData, pitchData, incomingData, insightsData] = await Promise.all([
+        getUserProjects(user.id || user._id, token).catch(() => []),
+        getUserPitches(token).catch(() => []),
+        getIncomingPitches(token).catch(() => []),
+        getMyInsights(token).catch(() => null),
+      ]);
+      setDroppedProjects(projData);
+      setMyPitches(pitchData);
+      setIncomingPitches(incomingData);
+      setInsights(insightsData);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <PageTransition>
@@ -105,10 +136,10 @@ export default function Dashboard() {
           ) : (
             <>
               {tab === 'dropped relics' && (
-                droppedProjects.length === 0
+                droppedRelics.length === 0
                   ? <p className="text-sm text-ghost-white/50">&gt; no dropped relics yet. <span className="text-ghost-primary cursor-pointer" onClick={() => navigate('/drop_project')}>drop_one →</span></p>
                   : <div className="space-y-2">
-                      {droppedProjects.map((p) => (
+                      {droppedRelics.map((p) => (
                         <div
                           key={p._id}
                           onClick={() => navigate(`/relic_detail/${p._id}`)}
@@ -133,6 +164,49 @@ export default function Dashboard() {
                         >
                           <span className="text-sm font-semibold">{p.title || p._id}</span>
                           <StatusBadge status={p.status} />
+                        </div>
+                      ))}
+                    </div>
+              )}
+
+              {tab === 'incoming requests' && (
+                incomingPending.length === 0
+                  ? <p className="text-sm text-ghost-white/50">&gt; no incoming revival requests yet.</p>
+                  : <div className="space-y-3">
+                      {incomingPending.map((p) => (
+                        <div key={p._id} className="rounded-xl border border-ghost-accent px-4 py-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-sm font-semibold">
+                                {p.projectId?.title || 'unknown project'}
+                              </span>
+                              <span className="text-xs text-ghost-white/60">
+                                from: {p.salvagerId?.username || 'unknown'} (salvaged: {p.salvagerId?.salvagedProjects ?? 0})
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="rounded-xl border border-green-400/60 px-3 py-2 text-xs text-green-300 hover:bg-green-500/10"
+                                onClick={() => respondToPitch(p._id, 'accepted')}
+                              >
+                                accept
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-xl border border-red-400/60 px-3 py-2 text-xs text-red-300 hover:bg-red-500/10"
+                                onClick={() => respondToPitch(p._id, 'rejected')}
+                              >
+                                reject
+                              </button>
+                            </div>
+                          </div>
+                          <p className="mt-2 whitespace-pre-wrap text-xs text-ghost-white/70">{p.pitchText}</p>
+                          {p.prLink && (
+                            <p className="mt-2 text-xs text-ghost-white/50">
+                              pr_link: <a className="text-ghost-primary underline" href={p.prLink} target="_blank" rel="noreferrer">{p.prLink}</a>
+                            </p>
+                          )}
                         </div>
                       ))}
                     </div>

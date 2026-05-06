@@ -120,7 +120,10 @@ export default function DropProject() {
             <p className="text-green-400">&gt; {result?.message || 'Project processed.'}</p>
             <p className="text-ghost-white/60">&gt; status: {result?.project?.status}</p>
             <p className="text-ghost-white/60">&gt; id: {result?.project?.id}</p>
-            <NeonButton onClick={() => navigate('/explore')}>browse_relics</NeonButton>
+            <div className="flex flex-wrap gap-3">
+              <NeonButton onClick={() => navigate('/dashboard')}>view_dashboard</NeonButton>
+              <NeonButton variant="outline" onClick={() => navigate('/explore')}>browse_relics</NeonButton>
+            </div>
           </div>
         )}
 

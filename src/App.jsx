@@ -6,7 +6,6 @@ import Explore from './pages/Explore';
 import RelicDetail from './pages/RelicDetail';
 import DropProject from './pages/DropProject';
 import Pitch from './pages/Pitch';
-import Leaderboard from './pages/Leaderboard';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -40,14 +39,6 @@ export default function App() {
               element={(
                 <ProtectedRoute>
                   <DropProject />
-              </ProtectedRoute>
-            )}
-          />
-          <Route
-            path="/leaderboard"
-            element={(
-              <ProtectedRoute>
-                <Leaderboard />
               </ProtectedRoute>
             )}
           />

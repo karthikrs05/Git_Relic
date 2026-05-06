@@ -67,6 +67,47 @@ router.get('/user/my', authMiddleware, async (req, res) => {
   }
 });
 
+// GET /api/pitches/donor/incoming — list pending pitches for projects dropped by current user
+router.get('/donor/incoming', authMiddleware, async (req, res) => {
+  try {
+    const myProjects = await Project.find({ donorId: req.user.id }).select('_id').lean();
+    const myProjectIds = myProjects.map((p) => p._id);
+    if (myProjectIds.length === 0) return res.json([]);
+
+    const incoming = await Pitch.find({ projectId: { $in: myProjectIds }, status: 'pending' })
+      .populate('projectId', 'title status')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const salvagerIds = incoming.map((p) => p.salvagerId);
+    const users = await populateUsers(salvagerIds);
+
+    const salvageCounts = await Project.aggregate([
+      { $match: { status: 'salvaged', currentOwner: { $in: salvagerIds } } },
+      { $group: { _id: '$currentOwner', salvaged: { $sum: 1 } } },
+    ]);
+
+    const salvagedByUser = new Map(salvageCounts.map((e) => [String(e._id), e.salvaged]));
+
+    const stitched = incoming.map((p) => {
+      const salvager = users.find((u) => u._id.toString() === String(p.salvagerId));
+      return {
+        ...p,
+        salvagerId: {
+          id: p.salvagerId,
+          username: salvager ? salvager.username : 'unknown',
+          salvagedProjects: salvagedByUser.get(String(p.salvagerId)) || 0,
+        },
+      };
+    });
+
+    res.json(stitched);
+  } catch (error) {
+    console.error('Incoming pitches error:', error.message);
+    res.status(500).json({ message: 'Failed to fetch incoming pitches' });
+  }
+});
+
 // GET /api/pitches/:pitchId — single pitch
 router.get('/:pitchId', async (req, res) => {
   try {

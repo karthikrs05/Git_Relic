@@ -6,7 +6,6 @@ const links = [
   { label: 'explore', to: '/explore' },
   { label: 'drop', to: '/drop_project' },
   { label: 'dashboard', to: '/dashboard' },
-  { label: 'leaderboard', to: '/leaderboard' },
 ];
 
 export default function Navbar() {

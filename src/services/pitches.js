@@ -28,6 +28,12 @@ export function getUserPitches(token) {
   });
 }
 
+export function getIncomingPitches(token) {
+  return request('/pitches/donor/incoming', {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+}
+
 export function acceptPitch(pitchId, token) {
   return request(`/pitches/${pitchId}/respond`, {
     method: 'PATCH',

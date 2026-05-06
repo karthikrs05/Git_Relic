@@ -248,5 +248,55 @@
         "message": "Account provisioned and ready."
       }
     ]
+  },
+  {
+    "userId": "c1c23c90-39ba-4baf-bb31-5c187906335c",
+    "username": "karthik",
+    "email": "karthik",
+    "createdAt": "2026-05-06T08:58:59.839Z",
+    "lastLoginAt": "2026-05-06T13:01:13.973Z",
+    "stats": {
+      "relicPoints": 0,
+      "droppedProjects": 0,
+      "salvagedProjects": 0,
+      "activePitches": 0
+    },
+    "activity": [
+      {
+        "at": "2026-05-06T08:58:59.840Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-06T12:25:19.761Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T12:32:09.616Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T12:46:30.983Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T12:54:09.746Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T12:59:43.014Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-06T13:01:13.946Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
   }
 ]
