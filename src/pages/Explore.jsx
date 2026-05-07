@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import PageTransition from '../components/PageTransition';
 import TerminalCard from '../components/TerminalCard';
 import MonospaceInput from '../components/MonospaceInput';
-import StatusBadge from '../components/StatusBadge';
 
 import { listProjects } from '../services/projects.js';
-const TECH_OPTIONS   = ['React', 'Node', 'Rust', 'Python', 'Go', 'TypeScript'];
-const STATUS_OPTIONS = ['published', 'pending_review', 'salvaged', 'failed'];
+const TECH_OPTIONS = ['React', 'Node', 'Rust', 'Python', 'Go', 'TypeScript'];
 
 export default function Explore() {
   const navigate = useNavigate();
@@ -15,8 +13,7 @@ export default function Explore() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
   const [query, setQuery]       = useState('');
-  const [techFilters, setTechFilters]     = useState([]);
-  const [statusFilters, setStatusFilters] = useState([]);
+  const [techFilters, setTechFilters] = useState([]);
 
   useEffect(() => {
     async function fetchProjects() {
@@ -39,10 +36,9 @@ export default function Explore() {
 
   const visible = projects.filter((p) => {
     const q = query.toLowerCase();
-    const matchesQuery  = !q || p.title?.toLowerCase().includes(q) || p.techStack?.some((t) => t.toLowerCase().includes(q));
-    const matchesTech   = techFilters.length === 0 || techFilters.some((f) => p.techStack?.some((t) => t.toLowerCase() === f.toLowerCase()));
-    const matchesStatus = statusFilters.length === 0 || statusFilters.includes(p.status);
-    return matchesQuery && matchesTech && matchesStatus;
+    const matchesQuery = !q || p.title?.toLowerCase().includes(q) || p.techStack?.some((t) => t.toLowerCase().includes(q));
+    const matchesTech  = techFilters.length === 0 || techFilters.some((f) => p.techStack?.some((t) => t.toLowerCase() === f.toLowerCase()));
+    return matchesQuery && matchesTech;
   });
 
   return (
@@ -63,21 +59,10 @@ export default function Explore() {
                 ))}
               </div>
             </div>
-            <div>
-              <p className="mb-2 text-ghost-white/60">status</p>
-              <div className="space-y-1">
-                {STATUS_OPTIONS.map((x) => (
-                  <label className="flex cursor-pointer items-center gap-2" key={x}>
-                    <input type="checkbox" checked={statusFilters.includes(x)} onChange={() => toggle(x, setStatusFilters)} />
-                    {x}
-                  </label>
-                ))}
-              </div>
-            </div>
-            {(techFilters.length > 0 || statusFilters.length > 0) && (
+            {techFilters.length > 0 && (
               <button
                 className="text-xs text-ghost-primary underline"
-                onClick={() => { setTechFilters([]); setStatusFilters([]); }}
+                onClick={() => setTechFilters([])}
               >
                 clear_filters
               </button>
@@ -107,10 +92,7 @@ export default function Explore() {
                 className="cursor-pointer p-4 transition-transform hover:scale-[1.01]"
                 onClick={() => navigate(`/relic_detail/${project._id}`)}
               >
-                <div className="mb-2 flex items-start justify-between gap-2">
-                  <h3 className="font-semibold leading-tight">{project.title || 'untitled'}</h3>
-                  <StatusBadge status={project.status} />
-                </div>
+                <h3 className="mb-2 font-semibold leading-tight">{project.title || 'untitled'}</h3>
                 <div className="mb-3 flex flex-wrap gap-1">
                   {project.techStack?.map((s) => (
                     <span key={s} className="rounded-lg bg-ghost-primary/10 px-2 py-0.5 text-xs text-ghost-primary">{s}</span>

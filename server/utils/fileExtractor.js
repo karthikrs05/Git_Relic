@@ -87,16 +87,23 @@ export async function cleanupProjectDir(projectDir) {
 
 export async function getProjectMetadata(projectDir) {
   try {
-    const files = await fs.readdir(projectDir, { recursive: true });
-    const fileCount = files.length;
+    const entries = await fs.readdir(projectDir, { recursive: true, withFileTypes: true });
+
+    // Filter to actual source files only — skip directories, .git internals, and node_modules
+    const sourceFiles = entries.filter(entry => {
+      if (entry.isDirectory()) return false;
+      const relativePath = path.join(entry.parentPath || entry.path || '', entry.name);
+      if (relativePath.includes('.git' + path.sep) || relativePath.includes('node_modules' + path.sep)) return false;
+      return true;
+    });
+
+    const fileCount = sourceFiles.length;
 
     // Detect languages based on file extensions
     const extensions = new Set();
-    for (const file of files) {
-      if (typeof file === 'string') {
-        const ext = path.extname(file);
-        if (ext) extensions.add(ext);
-      }
+    for (const entry of sourceFiles) {
+      const ext = path.extname(entry.name);
+      if (ext) extensions.add(ext);
     }
 
     const languageMap = {

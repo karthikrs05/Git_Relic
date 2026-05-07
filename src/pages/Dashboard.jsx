@@ -5,7 +5,7 @@ import TerminalCard from '../components/TerminalCard';
 import StatusBadge from '../components/StatusBadge';
 import { useAuth } from '../context/AuthContext';
 
-import { getUserProjects } from '../services/projects.js';
+import { getUserProjects, deleteProject } from '../services/projects.js';
 import { acceptPitch, getIncomingPitches, getUserPitches, rejectPitch } from '../services/pitches.js';
 import { getMyInsights } from '../services/insights.js';
 
@@ -61,20 +61,36 @@ export default function Dashboard() {
     try {
       if (decision === 'accepted') await acceptPitch(pitchId, token);
       else await rejectPitch(pitchId, token);
-
-      const [projData, pitchData, incomingData, insightsData] = await Promise.all([
-        getUserProjects(user.id || user._id, token).catch(() => []),
-        getUserPitches(token).catch(() => []),
-        getIncomingPitches(token).catch(() => []),
-        getMyInsights(token).catch(() => null),
-      ]);
-      setDroppedProjects(projData);
-      setMyPitches(pitchData);
-      setIncomingPitches(incomingData);
-      setInsights(insightsData);
+      await refreshData();
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleDelete(projectId, title) {
+    if (!confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) return;
+    setLoading(true);
+    try {
+      await deleteProject(projectId, token);
+      await refreshData();
+    } catch (err) {
+      alert(err.message || 'Failed to delete project');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function refreshData() {
+    const [projData, pitchData, incomingData, insightsData] = await Promise.all([
+      getUserProjects(user.id || user._id, token).catch(() => []),
+      getUserPitches(token).catch(() => []),
+      getIncomingPitches(token).catch(() => []),
+      getMyInsights(token).catch(() => null),
+    ]);
+    setDroppedProjects(projData);
+    setMyPitches(pitchData);
+    setIncomingPitches(incomingData);
+    setInsights(insightsData);
   }
 
   return (
@@ -142,11 +158,19 @@ export default function Dashboard() {
                       {droppedRelics.map((p) => (
                         <div
                           key={p._id}
-                          onClick={() => navigate(`/relic_detail/${p._id}`)}
                           className="flex cursor-pointer items-center justify-between rounded-xl border border-ghost-accent px-4 py-3 hover:border-ghost-primary transition-colors"
                         >
-                          <span className="text-sm font-semibold">{p.title || p._id}</span>
-                          <StatusBadge status={p.status} />
+                          <span className="text-sm font-semibold" onClick={() => navigate(`/relic_detail/${p._id}`)}>{p.title || p._id}</span>
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={p.status} />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleDelete(p._id, p.title); }}
+                              className="rounded-lg border border-red-400/40 px-2 py-1 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                              delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

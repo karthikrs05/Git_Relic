@@ -42,3 +42,10 @@ export function getPendingReview(token) {
     headers: { Authorization: `Bearer ${token}` }
   });
 }
+
+export function deleteProject(projectId, token) {
+  return request(`/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}

@@ -7,11 +7,6 @@ const colors = {
   published:      'text-green-300 border-green-400/30 bg-green-400/10',
   salvaged:       'text-ghost-primary border-ghost-primary/30 bg-ghost-primary/10',
   failed:         'text-red-400 border-red-400/30 bg-red-400/10',
-
-  // Legacy / display-only values (used in Leaderboard decorative UI)
-  orphaned:       'text-yellow-300 border-yellow-400/30 bg-yellow-400/10',
-  auctioning:     'text-cyan-300 border-cyan-400/30 bg-cyan-400/10',
-  revived:        'text-purple-300 border-purple-400/30 bg-purple-400/10',
 };
 
 export default function StatusBadge({ status }) {

@@ -35,13 +35,6 @@ function createAccount(user, overrides = {}) {
     email: user.email,
     createdAt: user.createdAt || now,
     lastLoginAt: now,
-    stats: {
-      relicPoints: 0,
-      droppedProjects: 0,
-      salvagedProjects: 0,
-      activePitches: 0,
-      ...overrides.stats,
-    },
     activity: overrides.activity || [
       { at: now, type: 'account_created', message: 'Account provisioned and ready.' },
     ],
@@ -71,14 +64,6 @@ async function upsertAccountForUser(user, overrides = {}) {
         email: user.email,
         createdAt: accounts[existingIndex].createdAt || user.createdAt,
         lastLoginAt: new Date().toISOString(),
-        stats: {
-          relicPoints: 0,
-          droppedProjects: 0,
-          salvagedProjects: 0,
-          activePitches: 0,
-          ...accounts[existingIndex].stats,
-          ...overrides.stats,
-        },
         activity: [
           ...(accounts[existingIndex].activity || []),
           ...(overrides.activity || []),

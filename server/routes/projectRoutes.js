@@ -62,6 +62,20 @@ router.post(
         return res.status(400).json({ message: "Project title is required" });
       }
 
+      // Prevent duplicate uploads — same user + same title
+      const normalizedTitle = req.body.title.trim().toLowerCase();
+      const duplicate = await Project.findOne({
+        donorId: req.user.id,
+        status: { $ne: "failed" },
+        $expr: { $eq: [{ $toLower: "$title" }, normalizedTitle] },
+      });
+      if (duplicate) {
+        await cleanupTempFile(req.file.path);
+        return res.status(409).json({
+          message: `You already uploaded a project titled "${duplicate.title}"`,
+        });
+      }
+
       tempFilePath = req.file.path;
       const extractId = randomUUID();
 
@@ -187,6 +201,20 @@ router.post(
     }
   },
 );
+
+// Handle multer errors (file too large, wrong type, etc.)
+// Ensures the partially-written temp file is always cleaned up.
+router.use((err, req, res, _next) => {
+  if (req.file?.path) {
+    cleanupTempFile(req.file.path).catch(() => {});
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    return res.status(400).json({ message: err.message || "Upload failed" });
+  }
+});
 
 router.post("/:projectId/analyze", authMiddleware, async (req, res) => {
   try {
@@ -374,5 +402,38 @@ router.get("/:projectId/security", async (req, res) => {
   }
 });
 
+
+// DELETE /api/projects/:projectId — donor can delete their own project
+router.delete("/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    if (project.donorId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the project donor can delete this project" });
+    }
+
+    // Clean up associated data
+    const Pitch = (await import("../models/Pitch.js")).default;
+    const Lineage = (await import("../models/Lineage.js")).default;
+    await Promise.all([
+      Pitch.deleteMany({ projectId: project._id }),
+      SecurityScanLog.deleteMany({ projectId: project._id }),
+      Lineage.deleteMany({ projectId: project._id }),
+    ]);
+
+    // Clean up files on disk if they still exist
+    if (project.storageLocation) {
+      await cleanupProjectDir(project.storageLocation);
+    }
+
+    await Project.findByIdAndDelete(project._id);
+
+    res.json({ message: "Project deleted successfully" });
+  } catch (error) {
+    console.error("Delete project error:", error.message);
+    res.status(500).json({ message: "Failed to delete project" });
+  }
+});
 
 export default router;

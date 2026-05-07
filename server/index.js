@@ -4,7 +4,7 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
 import projectRoutes from './routes/projectRoutes.js';
 import pitchRoutes from './routes/pitchRoutes.js';
-import lineageRoutes from './routes/lineageRoutes.js';
+
 import insightRoutes from './routes/insightRoutes.js';
 import { connectDB } from './config/db.js';
 
@@ -28,7 +28,7 @@ app.get('/api', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/pitches', pitchRoutes);
-app.use('/api/lineage', lineageRoutes);
+
 app.use('/api/insights', insightRoutes);
 
 // Connect to MongoDB and start server

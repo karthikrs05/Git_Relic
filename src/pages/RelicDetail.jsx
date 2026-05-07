@@ -72,7 +72,7 @@ export default function RelicDetail() {
 
             {/* AI Pathologist Report */}
             {analysis ? (
-              <div className="mt-4 space-y-1 text-sm">
+              <div className="mt-4 space-y-2 text-sm">
                 <p className="mb-2 text-ghost-primary">ai_pathologist_report</p>
                 <p className="text-ghost-white/80">&gt; summary: {analysis.summary}</p>
                 <p className="text-ghost-white/80">&gt; failure_reason: {analysis.failureReason}</p>
@@ -112,10 +112,9 @@ export default function RelicDetail() {
               project_stats {open ? '[-]' : '[+]'}
             </button>
             {open && (
-              <div className="space-y-1 text-sm text-ghost-white/80">
+              <div className="space-y-2 text-sm text-ghost-white/80">
                 <p>&gt; commits: {project.commitCount ?? '—'}</p>
                 <p>&gt; files: {project.metadata?.fileCount ?? '—'}</p>
-                <p>&gt; status: {project.status}</p>
                 <p>&gt; tech_stack: {project.techStack?.join(', ') || '—'}</p>
                 <p>&gt; donor: {project.donorId?.username ?? '—'}</p>
                 <p>&gt; owner: {project.currentOwner?.username ?? '—'}</p>
@@ -142,12 +141,16 @@ export default function RelicDetail() {
                 </div>
               ))}
             </div>
-            <NeonButton
-              className="mt-4 w-full"
-              onClick={() => navigate('/pitch', { state: { projectId } })}
-            >
-              submit_pitch
-            </NeonButton>
+            {project.status === 'salvaged' ? (
+              <p className="mt-4 text-sm text-ghost-primary">&gt; project_salvaged — owned by {project.currentOwner?.username ?? 'unknown'}</p>
+            ) : (
+              <NeonButton
+                className="mt-4 w-full"
+                onClick={() => navigate('/pitch', { state: { projectId } })}
+              >
+                submit_pitch
+              </NeonButton>
+            )}
           </TerminalCard>
         </div>
       </div>
