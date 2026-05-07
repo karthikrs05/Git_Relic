@@ -96,6 +96,11 @@ router.post('/register', async (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Please provide a valid email address' });
+    }
+
     const exists = await User.findOne({ email: normalizedEmail });
     if (exists) return res.status(409).json({ message: 'User already exists' });
 
