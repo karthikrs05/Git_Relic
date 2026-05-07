@@ -33,9 +33,9 @@ export default function Landing() {
   }, []);
 
   const stats = [
-    { label: 'total relics uploaded',    value: counts.totalRelicsUploaded || 0 },
-    { label: 'active revival requests',  value: counts.activeRevivalRequests || 0 },
-    { label: 'revived projects',         value: counts.revivedProjects || 0 },
+    { label: 'total relics uploaded', value: counts.totalRelicsUploaded || 0 },
+    { label: 'active revival requests', value: counts.activeRevivalRequests || 0 },
+    { label: 'revived projects', value: counts.revivedProjects || 0 },
   ];
 
   return (
@@ -86,7 +86,7 @@ export default function Landing() {
             )}
           </TerminalCard>
 
-          {/* Featured relics — live from API */}
+          {/* Featured relics*/}
           <TerminalCard className="p-5">
             <p className="mb-3 text-sm text-ghost-primary">featured_relics</p>
             {featuredRelics.length === 0 ? (

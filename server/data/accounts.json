@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "userId": "69fc2a32a6047a49e94d1305",
+    "username": "sravan",
+    "email": "sravan@gmail.com",
+    "createdAt": "2026-05-07T05:59:14.811Z",
+    "lastLoginAt": "2026-05-07T06:10:07.929Z",
+    "activity": [
+      {
+        "at": "2026-05-07T05:59:14.819Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-07T06:10:07.903Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
+  },
+  {
+    "userId": "69fc2a4ba6047a49e94d1306",
+    "username": "admin",
+    "email": "admin@gmail.com",
+    "createdAt": "2026-05-07T05:59:39.116Z",
+    "lastLoginAt": "2026-05-07T06:32:54.186Z",
+    "activity": [
+      {
+        "at": "2026-05-07T05:59:39.120Z",
+        "type": "account_created",
+        "message": "Account provisioned and ready."
+      },
+      {
+        "at": "2026-05-07T06:09:19.289Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-07T06:19:17.498Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      },
+      {
+        "at": "2026-05-07T06:32:54.159Z",
+        "type": "login",
+        "message": "Authenticated via backend session."
+      }
+    ]
+  }
+]
