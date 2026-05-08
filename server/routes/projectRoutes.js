@@ -4,12 +4,14 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { fileURLToPath } from "node:url";
 import { authMiddleware } from "../middleware/authMiddleware.js";
+import { populateUser, populateUsers } from "../utils/userUtils.js";
 import Project from "../models/Project.js";
 import SecurityScanLog from "../models/SecurityScanLog.js";
 import {
   extractZip,
   validateProjectStructure,
   cleanupTempFile,
+  cleanupProjectDir,
   getProjectMetadata,
 } from "../utils/fileExtractor.js";
 import { parseGitHistory } from "../utils/gitParser.js";
@@ -56,15 +58,32 @@ router.post(
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
+      if (!req.body.title || !req.body.title.trim()) {
+        return res.status(400).json({ message: "Project title is required" });
+      }
+
+      // Prevent duplicate uploads — same user + same title
+      const normalizedTitle = req.body.title.trim().toLowerCase();
+      const duplicate = await Project.findOne({
+        donorId: req.user.id,
+        status: { $ne: "failed" },
+        $expr: { $eq: [{ $toLower: "$title" }, normalizedTitle] },
+      });
+      if (duplicate) {
+        await cleanupTempFile(req.file.path);
+        return res.status(409).json({
+          message: `You already uploaded a project titled "${duplicate.title}"`,
+        });
+      }
 
       tempFilePath = req.file.path;
       const extractId = randomUUID();
 
       // Extract zip
-      const projectDir = await extractZip(tempFilePath, extractId);
+      const extractionDir = await extractZip(tempFilePath, extractId);
 
-      // Validate project structure
-      await validateProjectStructure(projectDir);
+      // Resolve actual project root (handles zips that wrap content in a folder)
+      const projectDir = await validateProjectStructure(extractionDir);
 
       // Parse git history
       const gitData = await parseGitHistory(projectDir);
@@ -74,6 +93,8 @@ router.post(
 
       // Create project record (initially in pending_scan status)
       const project = new Project({
+        title: req.body.title || req.file.originalname.replace('.zip', ''),
+        description: req.body.description || '',
         donorId: req.user.id,
         currentOwner: req.user.id,
         storageLocation: projectDir,
@@ -111,7 +132,9 @@ router.post(
         issues: sanitizedIssues.map(i => `${i.type} in ${i.file}`),
       };
 
-      if (scanResult.passed) {
+      if (scanResult.skipped) {
+        project.status = "published"; // Bypass pending_review
+      } else if (scanResult.passed) {
         project.status = "scanned"; // Ready for AI analysis
       } else {
         project.status = "pending_review"; // Blocked due to secrets
@@ -123,8 +146,11 @@ router.post(
       if (scanResult.passed) {
         const aiAnalysis = await analyzeProjectWithAI(projectDir, gitData);
         project.aiAnalysis = aiAnalysis;
-        project.status = "published"; // Ready for salvagers
+        project.status = "published";
+        project.storageLocation = null; // directory will be deleted below
         await project.save();
+        // Clean up extracted project files — all data is now in MongoDB
+        await cleanupProjectDir(projectDir);
       }
 
       // Cleanup temp file
@@ -175,6 +201,20 @@ router.post(
     }
   },
 );
+
+// Handle multer errors (file too large, wrong type, etc.)
+// Ensures the partially-written temp file is always cleaned up.
+router.use((err, req, res, _next) => {
+  if (req.file?.path) {
+    cleanupTempFile(req.file.path).catch(() => {});
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: `Upload error: ${err.message}` });
+  }
+  if (err) {
+    return res.status(400).json({ message: err.message || "Upload failed" });
+  }
+});
 
 router.post("/:projectId/analyze", authMiddleware, async (req, res) => {
   try {
@@ -232,13 +272,19 @@ router.post("/:projectId/analyze", authMiddleware, async (req, res) => {
 router.get("/list", async (_req, res) => {
   try {
     const projects = await Project.find({ status: "published" })
-      .populate("donorId", "username")
-      .select(
-        "title description techStack commitCount lastActivity metadata createdAt donorId",
-      );
+      .select("title description techStack commitCount lastActivity metadata createdAt donorId status")
+      .lean();
 
-    res.json(projects);
+    const donorIds = projects.map(p => p.donorId);
+    const users = await populateUsers(donorIds);
+    const stitched = projects.map(p => {
+      const donor = users.find(u => u._id.toString() === String(p.donorId));
+      return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
+    });
+
+    res.json(stitched);
   } catch (error) {
+    console.error('List projects error:', error.message, error.stack);
     res.status(500).json({ message: "Failed to fetch projects" });
   }
 });
@@ -273,15 +319,48 @@ router.get("/:projectId/analysis", async (req, res) => {
   }
 });
 
+// Helper: check if the authenticated user is in the ADMIN_EMAILS env var list
+function isAdmin(req) {
+  if (!process.env.ADMIN_EMAILS) return false;
+  const admins = process.env.ADMIN_EMAILS.split(',').map((e) => e.trim().toLowerCase());
+  return admins.includes(req.user?.email?.toLowerCase());
+}
+
+// Literal routes must be declared before /:projectId to avoid ambiguity
+router.get("/status/pending-review", authMiddleware, async (req, res) => {
+
+  if (!isAdmin(req)) {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  try {
+    const projects = await Project.find({ status: "pending_review" }).lean();
+    const donorIds = projects.map(p => p.donorId);
+    const users = await populateUsers(donorIds);
+    
+    const stitched = projects.map(p => {
+      const donor = users.find(u => u._id.toString() === String(p.donorId));
+      return { ...p, donorId: { username: donor ? donor.username : "unknown" } };
+    });
+
+    res.json(stitched);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch pending reviews" });
+  }
+});
+
 router.get("/:projectId", async (req, res) => {
   try {
-    const project = await Project.findById(req.params.projectId)
-      .populate("donorId", "username")
-      .populate("currentOwner", "username");
+    const project = await Project.findById(req.params.projectId).lean();
 
     if (!project) {
       return res.status(404).json({ message: "Project not found" });
     }
+
+    const donor = await populateUser(project.donorId);
+    const owner = await populateUser(project.currentOwner);
+
+    project.donorId = { username: donor ? donor.username : "unknown" };
+    project.currentOwner = { username: owner ? owner.username : "unknown" };
 
     res.json(project);
   } catch (error) {
@@ -291,9 +370,15 @@ router.get("/:projectId", async (req, res) => {
 
 router.get("/user/:userId", authMiddleware, async (req, res) => {
   try {
+    if (req.params.userId !== req.user.id && !isAdmin(req)) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    // Dashboard uses this to show projects the user has dropped (donor view),
+    // even after ownership is transferred via pitch acceptance.
     const projects = await Project.find({
-      currentOwner: req.params.userId,
-    }).select("title status createdAt commitCount metadata");
+      donorId: req.params.userId,
+    }).select("title status createdAt commitCount metadata currentOwner");
 
     res.json(projects);
   } catch (error) {
@@ -317,17 +402,37 @@ router.get("/:projectId/security", async (req, res) => {
   }
 });
 
-router.get("/status/pending-review", authMiddleware, async (req, res) => {
-  try {
-    // Only show to admin or the donor
-    const projects = await Project.find({ status: "pending_review" }).populate(
-      "donorId",
-      "username email",
-    );
 
-    res.json(projects);
+// DELETE /api/projects/:projectId — donor can delete their own project
+router.delete("/:projectId", authMiddleware, async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.projectId);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    if (project.donorId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Only the project donor can delete this project" });
+    }
+
+    // Clean up associated data
+    const Pitch = (await import("../models/Pitch.js")).default;
+    const Lineage = (await import("../models/Lineage.js")).default;
+    await Promise.all([
+      Pitch.deleteMany({ projectId: project._id }),
+      SecurityScanLog.deleteMany({ projectId: project._id }),
+      Lineage.deleteMany({ projectId: project._id }),
+    ]);
+
+    // Clean up files on disk if they still exist
+    if (project.storageLocation) {
+      await cleanupProjectDir(project.storageLocation);
+    }
+
+    await Project.findByIdAndDelete(project._id);
+
+    res.json({ message: "Project deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to fetch pending reviews" });
+    console.error("Delete project error:", error.message);
+    res.status(500).json({ message: "Failed to delete project" });
   }
 });
 

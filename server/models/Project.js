@@ -30,6 +30,9 @@ const projectSchema = new mongoose.Schema({
     summary: String,
     failureReason: String,
     roadmap: [String],
+    difficulty: String,
+    estimatedHours: String,
+    analyzedAt: { type: Date, default: Date.now },
   },
   storageLocation: String,
   currentOwner: {

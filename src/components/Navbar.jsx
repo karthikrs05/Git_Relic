@@ -1,14 +1,16 @@
 import { Link, NavLink } from 'react-router-dom';
 import NeonButton from './NeonButton';
+import { useAuth } from '../context/AuthContext';
 
 const links = [
   { label: 'explore', to: '/explore' },
   { label: 'drop', to: '/drop_project' },
   { label: 'dashboard', to: '/dashboard' },
-  { label: 'leaderboard', to: '/pitch' },
 ];
 
 export default function Navbar() {
+  const { isAuthenticated, user, logout } = useAuth();
+
   return (
     <header className="sticky top-0 z-50 border-b border-ghost-accent/60 bg-black/50 backdrop-blur-md">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
@@ -16,7 +18,7 @@ export default function Navbar() {
           &gt; git-relic_
         </Link>
         <div className="hidden items-center gap-6 md:flex">
-          {links.map((link) => (
+          {isAuthenticated && links.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -28,9 +30,24 @@ export default function Navbar() {
             </NavLink>
           ))}
         </div>
-        <Link to="/auth">
-          <NeonButton variant="outline">login_register</NeonButton>
-        </Link>
+        {isAuthenticated ? (
+          <div className="flex items-center gap-3">
+            <span className="hidden text-xs text-ghost-white/60 md:block">
+              {user?.username || 'authenticated'}
+            </span>
+            <button
+              type="button"
+              onClick={logout}
+              className="rounded-full border border-ghost-accent px-4 py-2 text-sm uppercase tracking-widest text-ghost-white/80 transition hover:border-ghost-primary hover:text-ghost-primary"
+            >
+              logout
+            </button>
+          </div>
+        ) : (
+          <Link to="/auth">
+            <NeonButton variant="outline">login_register</NeonButton>
+          </Link>
+        )}
       </nav>
     </header>
   );

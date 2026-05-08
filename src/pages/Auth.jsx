@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import PageTransition from '../components/PageTransition';
 import MonospaceInput from '../components/MonospaceInput';
 import NeonButton from '../components/NeonButton';
@@ -8,7 +8,8 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { login, register } = useAuth();
+  const location = useLocation();
+  const { login, register, isAuthenticated, loading } = useAuth();
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -27,6 +28,13 @@ export default function Auth() {
   }, [password]);
 
   const isRegister = mode === 'register';
+  const redirectTo = location.state?.from?.pathname || '/dashboard';
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate(redirectTo, { replace: true });
+    }
+  }, [isAuthenticated, loading, navigate, redirectTo]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -48,7 +56,7 @@ export default function Auth() {
       } else {
         await login({ email, password });
       }
-      navigate('/dashboard');
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -67,7 +75,7 @@ export default function Auth() {
           </p>
           <pre className="mt-6 text-xs text-ghost-white/70">&gt; listening: relic-auth-node
 &gt; handshake: encrypted
-&gt; status: awaiting credentials</pre>
+<span className="inline-block -translate-x-4">&gt; status: awaiting credentials</span></pre>
         </div>
 
         <div className="bg-black/50 p-8 flex items-center">

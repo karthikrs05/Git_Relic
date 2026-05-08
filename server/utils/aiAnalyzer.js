@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function analyzeProjectWithAI(projectDir, gitData) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Read README
     let readme = '';
@@ -50,14 +50,22 @@ Respond ONLY with valid JSON, no markdown formatting.`;
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
-    // Parse JSON response
+    const cleaned = responseText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    if (!cleaned.endsWith('}')) {
+      console.warn('Gemini response truncated — skipping AI analysis');
+      return null;
+    }
+
     let analysis;
     try {
-      analysis = JSON.parse(responseText);
-    } catch {
-      // If parsing fails, extract JSON from text
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : getDefaultAnalysis();
+      analysis = JSON.parse(cleaned);
+    } catch (e) {
+      console.warn('Gemini response invalid JSON — skipping AI analysis:', responseText);
+      return null;
     }
 
     return {

@@ -16,25 +16,35 @@ export default function App() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route element={<AppLayout />}>
-          <Route path="/landing" element={<Landing />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/relic_detail" element={<RelicDetail />} />
-          <Route
-            path="/drop_project"
-            element={(
-              <ProtectedRoute>
-                <DropProject />
+          <Route element={<AppLayout />}>
+            <Route path="/landing" element={<Landing />} />
+            <Route
+              path="/explore"
+              element={(
+                <ProtectedRoute>
+                  <Explore />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/relic_detail/:projectId"
+              element={(
+                <ProtectedRoute>
+                  <RelicDetail />
+                </ProtectedRoute>
+              )}
+            />
+            <Route
+              path="/drop_project"
+              element={(
+                <ProtectedRoute>
+                  <DropProject />
               </ProtectedRoute>
             )}
           />
           <Route
             path="/pitch"
-            element={(
-              <ProtectedRoute>
-                <Pitch />
-              </ProtectedRoute>
-            )}
+            element={(<ProtectedRoute><Pitch /></ProtectedRoute>)}
           />
           <Route
             path="/dashboard"

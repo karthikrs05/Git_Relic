@@ -6,7 +6,6 @@ export async function connectDB() {
     await mongoose.connect(mongoUri);
     console.log('MongoDB connected');
   } catch (error) {
-    console.error('MongoDB connection failed:', error.message);
-    process.exit(1);
+    console.warn('MongoDB not available, using JSON file storage:', error.message);
   }
 }

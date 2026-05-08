@@ -1,16 +1,65 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 
 const execAsync = promisify(exec);
+const require = createRequire(import.meta.url);
+
+// Resolve the project root (two levels up from server/utils/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
+
+// Resolve the gitleaks binary using three strategies (in priority order):
+//   1. npm-bundled binary (gitleaks npm package)
+//   2. Binary dropped into the project root  (e.g. gitleaks.exe / gitleaks)
+//   3. System-installed binary on PATH
+function getGitleaksBinary() {
+  const platform = process.platform;
+  const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+
+  // 1. npm package binary
+  const npmBinaryMap = {
+    linux:  `gitleaks/dist/gitleaks-linux-${arch}`,
+    darwin: `gitleaks/dist/gitleaks-darwin-${arch}`,
+    win32:  `gitleaks/dist/gitleaks-windows-${arch}.exe`,
+  };
+
+  const npmPath = npmBinaryMap[platform];
+  if (npmPath) {
+    try {
+      return require.resolve(npmPath);
+    } catch {
+      // npm package binary not present — fall through
+    }
+  }
+
+  // 2. Binary placed in the project root (manual install)
+  const localBinaryName = platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
+  const localBinaryPath = path.join(PROJECT_ROOT, localBinaryName);
+  try {
+    // Use sync existsSync equivalent via fs.statSync — we keep it sync here
+    // so the function stays synchronous and simple.
+    const { statSync } = require('fs');
+    statSync(localBinaryPath);
+    return localBinaryPath;
+  } catch {
+    // Not present in project root — fall through to PATH
+  }
+
+  // 3. System-installed gitleaks on PATH
+  return localBinaryName;
+}
 
 export async function scanWithGitleaks(projectPath) {
   try {
-    const gitleaksPath = require.resolve('gitleaks/dist/gitleaks-linux-x64');
+    const gitleaksPath = getGitleaksBinary();
 
     // Run gitleaks scan
     const { stdout, stderr } = await execAsync(
-      `${gitleaksPath} detect --source ${projectPath} --verbose --exit-code 0`,
+      `"${gitleaksPath}" detect --source "${projectPath}" --verbose --exit-code 0`,
       { maxBuffer: 10 * 1024 * 1024 } // 10MB buffer for large outputs
     );
 
@@ -38,14 +87,31 @@ export async function scanWithGitleaks(projectPath) {
       rawOutput: '',
     };
   } catch (error) {
-    // Gitleaks may exit with code 1 if secrets found, which is expected
-    console.log('Gitleaks scan completed with output');
+    // gitleaks not installed — don't block the upload, just skip the scan
+    const isNotFound =
+      error.code === 'ENOENT' ||
+      error.message?.includes('not found') ||
+      error.message?.includes('No such file') ||
+      error.message?.includes('cannot find the file') ||
+      error.message?.includes('not recognized');
 
-    // Try to extract results from stderr or return safe default
+    if (isNotFound) {
+      console.warn('[WARN] gitleaks binary not found. Security scan skipped — install gitleaks to enable scanning.');
+      return {
+        passed: true,
+        issues: [],
+        skipped: true,
+        reason: 'gitleaks not installed',
+        rawOutput: 'gitleaks not available: ' + error.message,
+      };
+    }
+
+    // Real scan error (timeout, permissions, etc.) — fail safe
+    console.error('Gitleaks scan error:', error.message);
     return {
       passed: false,
-      issues: [error.message || 'Secrets detected during scan'],
-      rawOutput: error.message || '',
+      issues: [{ type: 'scan_error', severity: 'HIGH', file: 'N/A', line: 'N/A' }],
+      rawOutput: error.message,
     };
   }
 }
@@ -60,16 +126,4 @@ export function sanitizeIssues(issues) {
       line: issue.StartLine || 'unknown',
       severity: 'HIGH',
     }));
-}
-
-export async function saveSecurityReport(projectId, scanResult, db) {
-  try {
-    const reportPath = `/uploads/security/${projectId}-scan.json`;
-    await fs.mkdir('/uploads/security', { recursive: true });
-    await fs.writeFile(reportPath, JSON.stringify(scanResult, null, 2));
-    return reportPath;
-  } catch (error) {
-    console.error('Failed to save security report:', error.message);
-    return null;
-  }
 }

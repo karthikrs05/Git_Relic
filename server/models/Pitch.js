@@ -15,6 +15,7 @@ const pitchSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  prLink: String,
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected'],
